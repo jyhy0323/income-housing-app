@@ -120,29 +120,41 @@ function setupEventListeners() {
 function setupChatEventListeners() {
     const chatInput = document.getElementById('chatInputText');
     const submitBtn = document.getElementById('btnSubmitChat');
+    const clearBtn = document.getElementById('btnClearChat');
 
-    submitBtn.addEventListener('click', () => {
-        const q = chatInput.value.trim();
-        if (q) executeChatQuery(q);
-    });
-
-    chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+    if (submitBtn) {
+        submitBtn.addEventListener('click', () => {
             const q = chatInput.value.trim();
             if (q) executeChatQuery(q);
-        }
-    });
+        });
+    }
+
+    if (chatInput) {
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const q = chatInput.value.trim();
+                if (q) executeChatQuery(q);
+            }
+        });
+    }
 
     document.querySelectorAll('.chip-btn').forEach(chip => {
         chip.addEventListener('click', () => {
             const q = chip.getAttribute('data-q');
-            chatInput.value = q;
+            if (chatInput) chatInput.value = q;
             executeChatQuery(q);
         });
     });
 
-    document.getElementById('btnCopyCustomTable').addEventListener('click', copyCustomTableToClipboard);
-    document.getElementById('btnDownloadCustomCsv').addEventListener('click', downloadCustomTableCsv);
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            chatHistory = [];
+            const container = document.getElementById('chatThreadContainer');
+            if (container) container.innerHTML = '';
+            const actions = document.getElementById('chatThreadActions');
+            if (actions) actions.style.display = 'none';
+        });
+    }
 }
 
 // ============================================================================
@@ -997,22 +1009,22 @@ function renderAiReport(data) {
 // ============================================================================
 // 11. TAB 5: AI Free Chat Query & Custom Table Generation
 // ============================================================================
-let lastChatResult = null;
+let chatHistory = [];
+let allChatResults = [];
 
 async function executeChatQuery(question) {
     const loadingBox = document.getElementById('chatLoading');
-    const resultBox = document.getElementById('chatResultBox');
     const loadingMsg = document.getElementById('chatLoadingMsg');
+    const chatInput = document.getElementById('chatInputText');
 
-    resultBox.style.display = 'none';
-    loadingBox.style.display = 'block';
+    if (loadingBox) loadingBox.style.display = 'block';
 
     let msgIdx = 0;
-    loadingMsg.innerText = chatLoadingMessages[0];
+    if (loadingMsg) loadingMsg.innerText = chatLoadingMessages[0];
     clearInterval(loadingInterval);
     loadingInterval = setInterval(() => {
         msgIdx = (msgIdx + 1) % chatLoadingMessages.length;
-        loadingMsg.innerText = chatLoadingMessages[msgIdx];
+        if (loadingMsg) loadingMsg.innerText = chatLoadingMessages[msgIdx];
     }, 2000);
 
     try {
@@ -1022,86 +1034,155 @@ async function executeChatQuery(question) {
             body: JSON.stringify({
                 question: question,
                 type: currentType,
-                sido: currentSido
+                sido: currentSido,
+                history: chatHistory
             })
         });
 
         const data = await res.json();
         clearInterval(loadingInterval);
-        loadingBox.style.display = 'none';
+        if (loadingBox) loadingBox.style.display = 'none';
 
         if (data.status !== 'success') {
             throw new Error(data.message || 'AI 질의응답 실패');
         }
 
-        lastChatResult = data.result;
-        renderChatResult(data.question, data.result);
+        const resultIndex = allChatResults.length;
+        allChatResults.push(data.result);
+
+        // Update history
+        chatHistory.push({
+            question: data.question,
+            answer_snippet: (data.result.answer || '').slice(0, 160)
+        });
+
+        renderChatTurn(data.question, data.result, resultIndex);
+
+        if (chatInput) chatInput.value = '';
+
+        const actionsEl = document.getElementById('chatThreadActions');
+        if (actionsEl) actionsEl.style.display = 'flex';
 
     } catch (err) {
         clearInterval(loadingInterval);
-        loadingBox.style.display = 'none';
+        if (loadingBox) loadingBox.style.display = 'none';
         alert("AI 질의응답 중 오류 발생: " + err.message);
     }
 }
 
-function renderChatResult(question, result) {
-    const resultBox = document.getElementById('chatResultBox');
-    resultBox.style.display = 'flex';
+function renderChatTurn(question, result, turnIdx) {
+    const container = document.getElementById('chatThreadContainer');
+    if (!container) return;
 
-    document.getElementById('chatDisplayQuestion').innerText = question;
-    document.getElementById('chatAnswerText').innerText = result.answer;
+    const turnDiv = document.createElement('div');
+    turnDiv.className = 'chat-turn-item';
+    turnDiv.id = `chatTurn_${turnIdx}`;
 
-    const kpContainer = document.getElementById('chatKeyPoints');
-    kpContainer.innerHTML = '';
+    // 1. Question Bubble
+    const qBubble = document.createElement('div');
+    qBubble.className = 'chat-q-bubble';
+    qBubble.innerHTML = `<span class="q-icon">❓</span> <strong>${question}</strong>`;
+    turnDiv.appendChild(qBubble);
+
+    // 2. Answer Bubble
+    const aBubble = document.createElement('div');
+    aBubble.className = 'chat-a-bubble';
+    
+    let keyPointsHtml = '';
     if (result.key_points && Array.isArray(result.key_points)) {
-        result.key_points.forEach(pt => {
-            const span = document.createElement('span');
-            span.className = 'key-point-pill';
-            span.innerText = `📌 ${pt}`;
-            kpContainer.appendChild(span);
-        });
+        keyPointsHtml = '<div class="chat-key-points">' + 
+            result.key_points.map(pt => `<span class="key-point-pill">📌 ${pt}</span>`).join('') + 
+            '</div>';
     }
 
+    aBubble.innerHTML = `
+        <div class="ai-avatar-badge">🤖 Gemini AI 분석 답변</div>
+        <p class="chat-answer-text">${result.answer}</p>
+        ${keyPointsHtml}
+    `;
+    turnDiv.appendChild(aBubble);
+
+    // 3. Custom Table (if exists)
     const tableData = result.table;
-    if (tableData) {
-        document.getElementById('customTableTitle').innerText = `📊 ${tableData.title || 'AI 맞춤 추출 결과 표'}`;
-        document.getElementById('customTableRowCount').innerText = `${tableData.rows ? tableData.rows.length : 0}개 지역 도출`;
+    if (tableData && tableData.rows && tableData.rows.length > 0) {
+        const tableContainer = document.createElement('div');
+        tableContainer.className = 'custom-table-container';
 
-        const thead = document.getElementById('customTableHead');
-        thead.innerHTML = '';
-        const trH = document.createElement('tr');
-        (tableData.headers || []).forEach(h => {
-            const th = document.createElement('th');
-            th.innerText = h;
-            trH.appendChild(th);
-        });
-        thead.appendChild(trH);
+        const headerHtml = `
+            <div class="custom-table-header">
+                <div class="table-info">
+                    <h3>📊 ${tableData.title || 'AI 맞춤 추출 결과 표'}</h3>
+                    <span class="badge-row-count">${tableData.rows.length}개 지역 도출</span>
+                </div>
+                <div class="custom-table-actions">
+                    <button class="btn-tool-sm" onclick="copyTableByIdx(${turnIdx})">📋 표 복사</button>
+                    <button class="btn-tool-sm" onclick="downloadCsvByIdx(${turnIdx})">📥 CSV 저장</button>
+                </div>
+            </div>
+        `;
 
-        const tbody = document.getElementById('customTableBody');
-        tbody.innerHTML = '';
-        (tableData.rows || []).forEach(row => {
-            const tr = document.createElement('tr');
+        let theadHtml = '<thead><tr>' + (tableData.headers || []).map(h => `<th>${h}</th>`).join('') + '</tr></thead>';
+        let tbodyHtml = '<tbody>';
+        tableData.rows.forEach(row => {
+            tbodyHtml += '<tr>';
             row.forEach((cell, idx) => {
-                const td = document.createElement('td');
-                td.innerText = cell;
-                if (idx === 0) td.style.fontWeight = '700';
+                let style = idx === 0 ? 'font-weight:700;' : '';
                 if (String(cell).includes('%') && (String(cell).includes('+') || String(cell).includes('-'))) {
-                    td.style.color = String(cell).includes('+') ? '#f87171' : '#38bdf8';
-                    td.style.fontWeight = '700';
+                    style += String(cell).includes('+') ? 'color:#f87171;font-weight:700;' : 'color:#38bdf8;font-weight:700;';
                 }
-                tr.appendChild(td);
+                tbodyHtml += `<td style="${style}">${cell}</td>`;
             });
-            tbody.appendChild(tr);
+            tbodyHtml += '</tr>';
         });
+        tbodyHtml += '</tbody>';
+
+        tableContainer.innerHTML = headerHtml + `
+            <div class="table-wrapper">
+                <table class="data-table">
+                    ${theadHtml}
+                    ${tbodyHtml}
+                </table>
+            </div>
+        `;
+        turnDiv.appendChild(tableContainer);
     }
 
-    resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // 4. Branch Questions (가지 질문 추천 박스)
+    if (result.follow_up_questions && Array.isArray(result.follow_up_questions) && result.follow_up_questions.length > 0) {
+        const branchBox = document.createElement('div');
+        branchBox.className = 'branch-questions-box';
+        
+        const branchTitle = document.createElement('div');
+        branchTitle.className = 'branch-title';
+        branchTitle.innerHTML = `<span>🌱</span> <strong>이어서 더 알아보기 (추천 후속 가지 질문):</strong>`;
+        branchBox.appendChild(branchTitle);
+
+        const chipsGroup = document.createElement('div');
+        chipsGroup.className = 'branch-chips-group';
+        result.follow_up_questions.forEach(fq => {
+            const chip = document.createElement('button');
+            chip.className = 'branch-chip';
+            chip.innerHTML = `<span>💡</span> ${fq}`;
+            chip.addEventListener('click', () => {
+                const chatInput = document.getElementById('chatInputText');
+                if (chatInput) chatInput.value = fq;
+                executeChatQuery(fq);
+            });
+            chipsGroup.appendChild(chip);
+        });
+        branchBox.appendChild(chipsGroup);
+        turnDiv.appendChild(branchBox);
+    }
+
+    container.appendChild(turnDiv);
+    turnDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function copyCustomTableToClipboard() {
-    if (!lastChatResult || !lastChatResult.table) return;
+function copyTableByIdx(idx) {
+    const item = allChatResults[idx];
+    if (!item || !item.table) return;
 
-    const t = lastChatResult.table;
+    const t = item.table;
     let md = `### ${t.title}\n\n`;
     md += `| ${t.headers.join(' | ')} |\n`;
     md += `| ${t.headers.map(() => '---').join(' | ')} |\n`;
@@ -1110,13 +1191,32 @@ function copyCustomTableToClipboard() {
     });
 
     navigator.clipboard.writeText(md).then(() => {
-        const btn = document.getElementById('btnCopyCustomTable');
-        const orig = btn.innerText;
-        btn.innerText = "✅ 복사 완료!";
-        setTimeout(() => { btn.innerText = orig; }, 1800);
+        alert("✅ 해당 표가 마크다운으로 클립보드에 복사되었습니다!");
     }).catch(err => {
         alert("복사 실패: " + err);
     });
+}
+
+function downloadCsvByIdx(idx) {
+    const item = allChatResults[idx];
+    if (!item || !item.table) return;
+
+    const t = item.table;
+    let csv = '\uFEFF';
+    csv += t.headers.join(',') + '\n';
+    t.rows.forEach(r => {
+        csv += r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',') + '\n';
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(t.title || 'AI_맞춤_통계표').replace(/\s+/g, '_')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 function downloadCustomTableCsv() {

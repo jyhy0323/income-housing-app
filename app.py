@@ -142,6 +142,7 @@ def chat_query():
     req_data = request.get_json() or {}
     question = req_data.get('question', '').strip()
     housing_type = req_data.get('type', '아파트')
+    history = req_data.get('history', [])
 
     if not question:
         return jsonify({'status': 'error', 'message': '질문을 입력해 주세요.'}), 400
@@ -167,6 +168,14 @@ def chat_query():
                 "quad": d['quadrant_label'].split(' ')[0]
             })
 
+        # 이전 대화 맥락 포맷팅
+        history_text = ""
+        if history and isinstance(history, list):
+            history_text = "\n[이전 대화 맥락 (가지 질문 맥락)]\n"
+            for h in history[-3:]: # 최근 3회 대화 참조
+                history_text += f"- 사용자: {h.get('question', '')}\n"
+                history_text += f"- AI 답변 요약: {h.get('answer_snippet', '')}\n"
+
         model = genai.GenerativeModel(
             model_name=GEMINI_MODEL_NAME,
             generation_config={"response_mime_type": "application/json"}
@@ -176,12 +185,13 @@ def chat_query():
 당신은 대한민국 거시경제 및 국토 통계 전문 AI입니다.
 아래 제공된 대한민국 전국 148개 시·군·구의 공식 통계 데이터(국세청 연말정산 1인당 평균 근로소득 및 한국부동산원 주택 가격지수, 괴리율)를 읽고,
 사용자의 질문에 데이터 기반으로 정확히 답변하며, 질문과 관련된 데이터들을 추출하여 [맞춤형 결과 표]를 구성해 주세요.
+사용자가 답변에 대해 추가적인 '가지 질문(꼬리 질문)'을 던졌다면, 이전 대화 맥락을 충분히 반영하여 심층적으로 답변해 주세요.
 
 [대한민국 전국 공식 통계 데이터 요약]
 - 전국 평균 연봉: {nat_summary['avg_income_manwon']:,}만 원 (전국 소득지수 100 기준점)
 - 전국 평균 가격지수: {nat_summary['price_index_latest']} (최근 6개월 상승률: +{nat_summary['price_growth_rate']}%)
 - 전체 자치구 수: {len(compact_rows)}개
-
+{history_text}
 [전체 자치구 148개 데이터셋]
 {json.dumps(compact_rows, ensure_ascii=False)}
 
@@ -191,8 +201,10 @@ def chat_query():
 [작성 지침]
 1. 반드시 실제 데이터셋에 존재하는 수치만을 정확히 인용하세요. 왜곡이나 추정치는 금지합니다.
 2. 답변(answer): 질문자의 의도를 정확히 해결하는 명쾌하고 친절한 경제 통계적 해설 (3~5문장).
+   - 강남 등 고가 지역의 괴리율이 낮게 나오는 이유에 대해 묻는다면: "부동산원 가격지수(Index, 2021=100)는 실거래 매매가(20~30억)가 아닌 시계열 지표(강남 98.5)이고, 소득지수는 198.9(전국의 약 2배)이므로 수학적으로 (98.5/198.9)*100 = 49.5%로 낮게 계산되는 지표의 통계적 특성"을 친절히 설명해 주세요.
 3. 핵심 요약(key_points): 질문과 직결된 핵심 수치 요약 2~3개.
-4. 결과 표(table): 질문에 해당하는 지역들을 선별하거나 비교하여 [제목(title)], [열 목록(headers)], [행 데이터(rows)]로 구성하세요. (예: 특정 금액 이상/이하 지역 목록, 특정 시도 내 순위, 두 지역 1:1 대조 등 질문에 최적화된 표)
+4. 결과 표(table): 질문에 해당하는 지역들을 선별하거나 비교하여 [제목(title)], [열 목록(headers)], [행 데이터(rows)]로 구성하세요.
+5. 가지 질문 추천(follow_up_questions): 사용자가 이 답변을 읽고 더 깊이 파고들 수 있는 날카롭고 흥미로운 후속 '가지 질문' 3가지를 제시하세요.
 
 반드시 아래 JSON 스키마 규격으로만 응답해 주세요:
 {{
@@ -207,7 +219,12 @@ def chat_query():
     "rows": [
       ["#1", "서울", "강남구", "8,419.6", "198.89", "98.50", "+0.33%", "49.52%", "자산집중"]
     ]
-  }}
+  }},
+  "follow_up_questions": [
+    "추천 후속 가지 질문 1 (예: 강남과 부산 중구의 공식 지표 대조 표 보여줘)",
+    "추천 후속 가지 질문 2",
+    "추천 후속 가지 질문 3"
+  ]
 }}
 """
 

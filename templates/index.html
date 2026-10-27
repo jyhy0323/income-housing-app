@@ -6,7 +6,7 @@
     <title>대한민국 소득 수준 vs 부동산 가격 자산 양극화 인텔리전스 대시보드</title>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=20261027_03">
+    <link rel="stylesheet" href="/static/css/style.css?v=20261027_04">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -480,40 +480,17 @@
                     </button>
                 </div>
 
-                <div class="chat-loading" id="chatLoading" style="display: none;">
-                    <div class="spinner"></div>
-                    <p class="loading-msg" id="chatLoadingMsg">Gemini 3.5가 148개 전국 시·군·구 데이터를 검색하여 맞춤형 표를 작성하고 있습니다...</p>
+                <div class="chat-thread-container" id="chatThreadContainer">
+                    <!-- Conversations & branch questions appended here -->
                 </div>
 
-                <div class="chat-result-box" id="chatResultBox" style="display: none;">
-                    <div class="chat-q-bubble">
-                        <span class="q-icon">❓</span> <strong id="chatDisplayQuestion">질문 내용</strong>
-                    </div>
+                <div class="chat-loading" id="chatLoading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p class="loading-msg" id="chatLoadingMsg">Gemini 3.5가 148개 전국 시·군·구 데이터를 검색하여 답변과 맞춤형 표를 작성하고 있습니다...</p>
+                </div>
 
-                    <div class="chat-a-bubble">
-                        <div class="ai-avatar-badge">🤖 Gemini AI 분석 답변</div>
-                        <p class="chat-answer-text" id="chatAnswerText"></p>
-                        <div class="chat-key-points" id="chatKeyPoints"></div>
-                    </div>
-
-                    <div class="custom-table-container" id="customTableContainer">
-                        <div class="custom-table-header">
-                            <div class="table-info">
-                                <h3 id="customTableTitle">📊 AI 맞춤 추출 결과 표</h3>
-                                <span class="badge-row-count" id="customTableRowCount">0개 지역</span>
-                            </div>
-                            <div class="custom-table-actions">
-                                <button id="btnCopyCustomTable" class="btn-tool-sm">📋 표 복사</button>
-                                <button id="btnDownloadCustomCsv" class="btn-tool-sm">📥 CSV 저장</button>
-                            </div>
-                        </div>
-                        <div class="table-wrapper">
-                            <table class="data-table" id="customResultTable">
-                                <thead id="customTableHead"></thead>
-                                <tbody id="customTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
+                <div class="chat-thread-actions" id="chatThreadActions" style="display: none; justify-content: flex-end; margin-top: 10px;">
+                    <button id="btnClearChat" class="btn-tool-sm">🔄 대화 초기화 (새로운 질문 시작)</button>
                 </div>
             </section>
         </div>
@@ -525,6 +502,6 @@
         </footer>
     </div>
 
-    <script src="/static/js/app.js?v=20261027_03"></script>
+    <script src="/static/js/app.js?v=20261027_04"></script>
 </body>
 </html>
