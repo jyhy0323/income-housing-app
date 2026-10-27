@@ -223,25 +223,38 @@ function renderKPIs() {
     const nat = currentData.nat_summary;
     const districts = currentData.districts;
 
-    document.getElementById('kpiSeoulIncome').innerText = `${nat.avg_income_manwon.toLocaleString()} 만원`;
-    document.getElementById('kpiSeoulGrowth').innerText = `+${nat.price_growth_rate}%`;
+    const elIncome = document.getElementById('kpiSeoulIncome');
+    if (elIncome) elIncome.innerText = `${nat.avg_income_manwon.toLocaleString()} 만원`;
+
+    const elGap = document.getElementById('kpiIncomeGap');
+    if (elGap) elGap.innerText = `${nat.income_gap_ratio}배`;
+
+    const elGapSub = document.getElementById('kpiIncomeGapSub');
+    if (elGapSub) elGapSub.innerText = `괴리율 격차: ${nat.mismatch_gap_ratio}배`;
 
     const topIncome = [...districts].sort((a, b) => b.avg_income_manwon - a.avg_income_manwon)[0];
     if (topIncome) {
-        document.getElementById('kpiTopIncomeGu').innerText = topIncome.full_name;
-        document.getElementById('kpiTopIncomeVal').innerText = `평균 ${topIncome.avg_income_manwon.toLocaleString()}만 원 (전국 1위)`;
+        const elTopIncomeGu = document.getElementById('kpiTopIncomeGu');
+        const elTopIncomeVal = document.getElementById('kpiTopIncomeVal');
+        if (elTopIncomeGu) elTopIncomeGu.innerText = topIncome.full_name;
+        if (elTopIncomeVal) elTopIncomeVal.innerText = `평균 ${topIncome.avg_income_manwon.toLocaleString()}만 원 (전국 1위)`;
     }
 
     const topMismatch = [...districts].sort((a, b) => b.mismatch_ratio - a.mismatch_ratio)[0];
     if (topMismatch) {
-        document.getElementById('kpiTopMismatchGu').innerText = topMismatch.full_name;
-        document.getElementById('kpiTopMismatchVal').innerText = `괴리율 ${topMismatch.mismatch_ratio}% (연봉 ${topMismatch.avg_income_manwon}만)`;
+        const elTopMismatchGu = document.getElementById('kpiTopMismatchGu');
+        const elTopMismatchVal = document.getElementById('kpiTopMismatchVal');
+        if (elTopMismatchGu) elTopMismatchGu.innerText = topMismatch.full_name;
+        if (elTopMismatchVal) elTopMismatchVal.innerText = `괴리율 ${topMismatch.mismatch_ratio}% (연봉 ${topMismatch.avg_income_manwon}만)`;
     }
 
     const regionName = currentSido === '전체' ? '대한민국 전국' : currentSido;
-    document.getElementById('quadrantTitle').innerText = `📊 ${regionName} 4분면 매트릭스: 소득 수준 vs 부동산 상승률`;
-    document.getElementById('rankingTitle').innerText = `🏆 ${regionName} 소득 순위 vs 주거부담 괴리율 (전국 100 기준)`;
-    document.getElementById('tableSectionTitle').innerText = `📋 ${regionName} 시·군·구 종합 통계 데이터 시트 (${districts.length}개 지역)`;
+    const qTitle = document.getElementById('quadrantTitle');
+    if (qTitle) qTitle.innerText = `📊 ${regionName} 4분면 매트릭스: 소득 수준 vs 부동산 상승률`;
+    const rTitle = document.getElementById('rankingTitle');
+    if (rTitle) rTitle.innerText = `🏆 ${regionName} 소득 순위 vs 주거부담 괴리율 (전국 100 기준)`;
+    const tTitle = document.getElementById('tableSectionTitle');
+    if (tTitle) tTitle.innerText = `📋 ${regionName} 시·군·구 종합 통계 데이터 시트 (${districts.length}개 지역)`;
 }
 
 function populateGuDropdown() {
