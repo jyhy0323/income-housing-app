@@ -159,22 +159,23 @@ async function loadDashboardData(type, sido) {
         currentSido = sido;
 
         // Tab 1 Data Rendering
-        renderSidoButtons();
-        renderTypeButtons();
-        renderKPIs();
-        populateGuDropdown();
-        renderDistrictCharts();
-        renderTable();
+        try { renderSidoButtons(); } catch (e) { console.warn("renderSidoButtons error:", e); }
+        try { renderTypeButtons(); } catch (e) { console.warn("renderTypeButtons error:", e); }
+        try { renderKPIs(); } catch (e) { console.warn("renderKPIs error:", e); }
+        try { populateGuDropdown(); } catch (e) { console.warn("populateGuDropdown error:", e); }
+        try { renderDistrictCharts(); } catch (e) { console.warn("renderDistrictCharts error:", e); }
+        try { renderTable(); } catch (e) { console.warn("renderTable error:", e); }
 
         // Multi-dimensional Tabs Rendering
-        renderQuintilesTab();
-        renderMacroRegionsTab();
-        renderHousingTypesTab();
+        try { renderQuintilesTab(); } catch (e) { console.warn("renderQuintilesTab error:", e); }
+        try { renderMacroRegionsTab(); } catch (e) { console.warn("renderMacroRegionsTab error:", e); }
+        try { renderHousingTypesTab(); } catch (e) { console.warn("renderHousingTypesTab error:", e); }
 
-        if (!selectedLocation && currentData.districts.length > 0) {
+        if (!selectedLocation && currentData.districts && currentData.districts.length > 0) {
             selectedLocation = currentData.districts[0].full_name;
         }
-        document.getElementById('aiTargetBadge').innerText = `선택: ${selectedLocation}`;
+        const badgeEl = document.getElementById('aiTargetBadge');
+        if (badgeEl) badgeEl.innerText = `선택: ${selectedLocation}`;
 
     } catch (err) {
         console.error("데이터 로드 실패:", err);
@@ -533,6 +534,10 @@ function renderQuintilesTab() {
 
     quintiles.forEach(q => {
         const info = tierColorMap[q.tier] || { cls: 'q3-bg', badge: `${q.tier}분위`, color: '#38bdf8' };
+        const avgInc = q.avg_income_manwon || q.avg_income || 0;
+        const minInc = q.income_min || q.min_income || 0;
+        const maxInc = q.income_max || q.max_income || 0;
+
         const card = document.createElement('div');
         card.className = 'quintile-card';
         card.innerHTML = `
@@ -542,11 +547,11 @@ function renderQuintilesTab() {
             </div>
             <div style="margin: 8px 0 4px;">
                 <span style="font-size: 0.76rem; color: #94a3b8;">평균 1인 연봉</span>
-                <div class="q-income-val" style="color: ${info.color};">${q.avg_income_manwon.toLocaleString()} <span style="font-size: 0.85rem; font-weight: normal; color: #94a3b8;">만원</span></div>
+                <div class="q-income-val" style="color: ${info.color};">${avgInc.toLocaleString()} <span style="font-size: 0.85rem; font-weight: normal; color: #94a3b8;">만원</span></div>
             </div>
             <div class="q-detail-row">
                 <span>소득 구간</span>
-                <strong style="color: #cbd5e1;">${q.income_min.toLocaleString()} ~ ${q.income_max.toLocaleString()}만</strong>
+                <strong style="color: #cbd5e1;">${minInc.toLocaleString()} ~ ${maxInc.toLocaleString()}만</strong>
             </div>
             <div class="q-detail-row">
                 <span>평균 가격지수</span>
@@ -572,7 +577,7 @@ function renderQuintilesTab() {
     if (quintileCompareChart) quintileCompareChart.destroy();
 
     const labels = quintiles.map(q => `${q.tier}분위`);
-    const incomes = quintiles.map(q => q.avg_income_manwon);
+    const incomes = quintiles.map(q => (q.avg_income_manwon || q.avg_income || 0));
     const priceIndices = quintiles.map(q => q.avg_price_index);
 
     quintileCompareChart = new Chart(ctxCompare, {
@@ -672,14 +677,18 @@ function renderQuintilesTab() {
     const tbody = document.getElementById('quintileTableBody');
     tbody.innerHTML = '';
     quintiles.forEach(q => {
-        const info = tierColorMap[q.tier];
+        const info = tierColorMap[q.tier] || { cls: 'q3-bg', badge: `${q.tier}분위`, color: '#38bdf8' };
+        const avgInc = q.avg_income_manwon || q.avg_income || 0;
+        const minInc = q.income_min || q.min_income || 0;
+        const maxInc = q.income_max || q.max_income || 0;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong style="color: ${info.color};">${q.tier}분위</strong></td>
             <td><span class="q-badge ${info.cls}">${info.badge}</span></td>
             <td>${q.count}개</td>
-            <td>${q.income_min.toLocaleString()}만 ~ ${q.income_max.toLocaleString()}만 원</td>
-            <td><strong>${q.avg_income_manwon.toLocaleString()}만 원</strong></td>
+            <td>${minInc.toLocaleString()}만 ~ ${maxInc.toLocaleString()}만 원</td>
+            <td><strong>${avgInc.toLocaleString()}만 원</strong></td>
             <td>${q.avg_income_index}</td>
             <td>${q.avg_price_index}</td>
             <td style="color: ${q.avg_growth_rate >= 0 ? '#f87171' : '#38bdf8'}; font-weight: 700;">${q.avg_growth_rate >= 0 ? '+' : ''}${q.avg_growth_rate}%</td>
@@ -692,9 +701,12 @@ function renderQuintilesTab() {
     // 7-5. Academic Insight Dynamic Text
     const q1 = quintiles[0];
     const q5 = quintiles[quintiles.length - 1];
-    if (q1 && q5) {
-        document.getElementById('quintileInsightText').innerHTML = `
-            전국 148개 자치구 분석 결과, 최상위 5분위(평균 <strong>${q5.avg_income_manwon.toLocaleString()}만원</strong>)와 최하위 1분위(평균 <strong>${q1.avg_income_manwon.toLocaleString()}만원</strong>)의 소득 5분위 배율은 <strong>약 ${nat.income_gap_ratio}배</strong> 수준입니다. 
+    const insightEl = document.getElementById('quintileInsightText');
+    if (q1 && q5 && insightEl) {
+        const q5Inc = q5.avg_income_manwon || q5.avg_income || 0;
+        const q1Inc = q1.avg_income_manwon || q1.avg_income || 0;
+        insightEl.innerHTML = `
+            전국 148개 자치구 분석 결과, 최상위 5분위(평균 <strong>${q5Inc.toLocaleString()}만원</strong>)와 최하위 1분위(평균 <strong>${q1Inc.toLocaleString()}만원</strong>)의 소득 5분위 배율은 <strong>약 ${nat.income_gap_ratio}배</strong> 수준입니다. 
             그러나 가격지수에 대한 체감 주거부담 괴리율은 1분위(<strong>${q1.avg_mismatch_ratio}%</strong>)가 5분위(<strong>${q5.avg_mismatch_ratio}%</strong>) 대비 <strong>${nat.mismatch_gap_ratio}배 높아</strong>, 
             소득이 취약할수록 주택 가격 지수에 대한 체감 주거비 압박을 심하게 겪는 <strong>'주거 부담 역진성(Regressive Housing Burden)'</strong> 현상이 통계적으로 명확히 입증됩니다.
         `;
