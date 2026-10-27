@@ -1,4 +1,5 @@
 // static/js/app.js - Nationwide Income & Housing Statistics Analytics Dashboard
+// + AI Chat & Custom Data Table Generator
 
 let currentData = null;
 let currentType = '아파트';
@@ -17,12 +18,20 @@ const loadingMessages = [
     "조별 보고서 및 과제에 바로 인용할 수 있는 학술 심층 진단을 작성하는 중입니다..."
 ];
 
+const chatLoadingMessages = [
+    "Gemini 3.5 모델이 148개 전국 시·군·구 공식 통계를 검색하고 있습니다...",
+    "질문 조건에 부합하는 지역들을 필터링 및 대조하고 있습니다...",
+    "질문 맞춤형 통계 비교 표(Table)를 생성하고 있습니다...",
+    "수치 검증 및 경제적 인사이트 요약을 정리하는 중입니다..."
+];
+
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
 
 async function initApp() {
     setupEventListeners();
+    setupChatEventListeners();
     await loadDashboardData(currentType, currentSido);
 }
 
@@ -37,7 +46,7 @@ function setupEventListeners() {
         }
     });
 
-    // Run AI Button
+    // Run AI Single District Button
     document.getElementById('btnRunAi').addEventListener('click', () => {
         const target = quickSelect.value || selectedLocation || '서울 강남구';
         triggerAiAnalysis(target);
@@ -58,6 +67,39 @@ function setupEventListeners() {
 
     // Download Report Button
     document.getElementById('btnDownloadReport').addEventListener('click', downloadReportMarkdown);
+}
+
+// 🔥 Chat & Custom Table Event Listeners
+function setupChatEventListeners() {
+    const chatInput = document.getElementById('chatInputText');
+    const submitBtn = document.getElementById('btnSubmitChat');
+
+    submitBtn.addEventListener('click', () => {
+        const q = chatInput.value.trim();
+        if (q) executeChatQuery(q);
+    });
+
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const q = chatInput.value.trim();
+            if (q) executeChatQuery(q);
+        }
+    });
+
+    // Sample question chips
+    document.querySelectorAll('.chip-btn').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const q = chip.getAttribute('data-q');
+            chatInput.value = q;
+            executeChatQuery(q);
+        });
+    });
+
+    // Copy Custom Table
+    document.getElementById('btnCopyCustomTable').addEventListener('click', copyCustomTableToClipboard);
+
+    // Download Custom CSV
+    document.getElementById('btnDownloadCustomCsv').addEventListener('click', downloadCustomTableCsv);
 }
 
 // 1. Load Data from Backend API
@@ -147,7 +189,6 @@ function renderKPIs() {
         document.getElementById('kpiTopMismatchVal').innerText = `괴리율 ${topMismatch.mismatch_ratio}% (연봉 ${topMismatch.avg_income_manwon}만)`;
     }
 
-    // Update Section titles
     const regionName = currentSido === '전체' ? '대한민국 전국' : currentSido;
     document.getElementById('quadrantTitle').innerText = `📊 ${regionName} 4분면 매트릭스: 소득 수준 vs 부동산 상승률`;
     document.getElementById('rankingTitle').innerText = `🏆 ${regionName} 소득 순위 vs 주거부담 괴리율 (전국 100 기준)`;
@@ -404,7 +445,7 @@ function selectAndAnalyzeLocation(location) {
     triggerAiAnalysis(location);
 }
 
-// 8. Gemini AI 심층 진단 호출
+// 8. Gemini AI Single District Report
 async function triggerAiAnalysis(location) {
     const placeholder = document.getElementById('aiPlaceholder');
     const loading = document.getElementById('aiLoading');
@@ -447,7 +488,7 @@ async function triggerAiAnalysis(location) {
     }
 }
 
-// 9. Render AI Report Content
+// 9. Render AI Single Report Content
 let lastReportData = null;
 
 function renderAiReport(data) {
@@ -459,23 +500,171 @@ function renderAiReport(data) {
     document.getElementById('aiLoading').style.display = 'none';
     document.getElementById('aiResult').style.display = 'flex';
 
-    // Headline
     document.getElementById('reportHeadlineText').innerText = report.headline;
-
-    // Mini Stats
     document.getElementById('rIncomeVal').innerText = `${stats.avg_income_manwon.toLocaleString()}만 원`;
     document.getElementById('rIncomeRank').innerText = `${stats.nat_income_rank}위 / ${nat.total_nationwide}개`;
     document.getElementById('rPriceVal').innerText = `${stats.price_index_latest} (${stats.growth_rate >= 0 ? '+' : ''}${stats.growth_rate}%)`;
     document.getElementById('rMismatchVal').innerText = `${stats.mismatch_ratio}% (${stats.quadrant_label.split(' ')[0]})`;
 
-    // Sections
     document.getElementById('reportIncomeText').innerText = report.income_summary;
     document.getElementById('reportHousingText').innerText = report.housing_summary;
     document.getElementById('reportMismatchText').innerText = report.mismatch_analysis;
     document.getElementById('reportPolicyText').innerText = report.policy_implication;
 }
 
-// 10. Clipboard & Markdown Export
+// 🔥 10. Execute Chat Query & Custom Table Generation
+let lastChatResult = null;
+
+async function executeChatQuery(question) {
+    const loadingBox = document.getElementById('chatLoading');
+    const resultBox = document.getElementById('chatResultBox');
+    const loadingMsg = document.getElementById('chatLoadingMsg');
+
+    resultBox.style.display = 'none';
+    loadingBox.style.display = 'block';
+
+    let msgIdx = 0;
+    loadingMsg.innerText = chatLoadingMessages[0];
+    clearInterval(loadingInterval);
+    loadingInterval = setInterval(() => {
+        msgIdx = (msgIdx + 1) % chatLoadingMessages.length;
+        loadingMsg.innerText = chatLoadingMessages[msgIdx];
+    }, 2000);
+
+    try {
+        const res = await fetch('/api/chat-query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                question: question,
+                type: currentType,
+                sido: currentSido
+            })
+        });
+
+        const data = await res.json();
+        clearInterval(loadingInterval);
+        loadingBox.style.display = 'none';
+
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'AI 질의응답 실패');
+        }
+
+        lastChatResult = data.result;
+        renderChatResult(data.question, data.result);
+
+    } catch (err) {
+        clearInterval(loadingInterval);
+        loadingBox.style.display = 'none';
+        alert("AI 질의응답 중 오류 발생: " + err.message);
+    }
+}
+
+function renderChatResult(question, result) {
+    const resultBox = document.getElementById('chatResultBox');
+    resultBox.style.display = 'flex';
+
+    // Display question and answer
+    document.getElementById('chatDisplayQuestion').innerText = question;
+    document.getElementById('chatAnswerText').innerText = result.answer;
+
+    // Key points
+    const kpContainer = document.getElementById('chatKeyPoints');
+    kpContainer.innerHTML = '';
+    if (result.key_points && Array.isArray(result.key_points)) {
+        result.key_points.forEach(pt => {
+            const span = document.createElement('span');
+            span.className = 'key-point-pill';
+            span.innerText = `📌 ${pt}`;
+            kpContainer.appendChild(span);
+        });
+    }
+
+    // Render Custom Table
+    const tableData = result.table;
+    if (tableData) {
+        document.getElementById('customTableTitle').innerText = `📊 ${tableData.title || 'AI 맞춤 추출 결과 표'}`;
+        document.getElementById('customTableRowCount').innerText = `${tableData.rows ? tableData.rows.length : 0}개 지역 도출`;
+
+        // Headers
+        const thead = document.getElementById('customTableHead');
+        thead.innerHTML = '';
+        const trH = document.createElement('tr');
+        (tableData.headers || []).forEach(h => {
+            const th = document.createElement('th');
+            th.innerText = h;
+            trH.appendChild(th);
+        });
+        thead.appendChild(trH);
+
+        // Body
+        const tbody = document.getElementById('customTableBody');
+        tbody.innerHTML = '';
+        (tableData.rows || []).forEach(row => {
+            const tr = document.createElement('tr');
+            row.forEach((cell, idx) => {
+                const td = document.createElement('td');
+                td.innerText = cell;
+                // Style highlights
+                if (idx === 0) td.style.fontWeight = '700';
+                if (String(cell).includes('%') && (String(cell).includes('+') || String(cell).includes('-'))) {
+                    td.style.color = String(cell).includes('+') ? '#f87171' : '#38bdf8';
+                    td.style.fontWeight = '700';
+                }
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Smooth scroll down to result box
+    resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// 11. Custom Table Copy & CSV Export
+function copyCustomTableToClipboard() {
+    if (!lastChatResult || !lastChatResult.table) return;
+
+    const t = lastChatResult.table;
+    let md = `### ${t.title}\n\n`;
+    md += `| ${t.headers.join(' | ')} |\n`;
+    md += `| ${t.headers.map(() => '---').join(' | ')} |\n`;
+    t.rows.forEach(r => {
+        md += `| ${r.join(' | ')} |\n`;
+    });
+
+    navigator.clipboard.writeText(md).then(() => {
+        const btn = document.getElementById('btnCopyCustomTable');
+        const orig = btn.innerText;
+        btn.innerText = "✅ 복사 완료!";
+        setTimeout(() => { btn.innerText = orig; }, 1800);
+    }).catch(err => {
+        alert("복사 실패: " + err);
+    });
+}
+
+function downloadCustomTableCsv() {
+    if (!lastChatResult || !lastChatResult.table) return;
+
+    const t = lastChatResult.table;
+    let csv = '\uFEFF'; // UTF-8 BOM
+    csv += t.headers.join(',') + '\n';
+    t.rows.forEach(r => {
+        csv += r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',') + '\n';
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(t.title || 'AI_맞춤_통계표').replace(/\s+/g, '_')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// 12. Single Report Markdown Export
 function generateMarkdownReport() {
     if (!lastReportData) return "";
     const r = lastReportData.report;

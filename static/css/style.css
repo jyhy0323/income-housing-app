@@ -148,6 +148,237 @@ body {
 .text-warning { color: var(--accent-warning) !important; }
 .text-green { color: var(--accent-green) !important; }
 
+/* 🔥 NEW: AI Chat & Custom Table Generator Section */
+.chat-query-card {
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    background: linear-gradient(180deg, #131b2e 0%, #111827 100%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 25px rgba(56, 189, 248, 0.08);
+}
+
+.badge-ai-model {
+    font-size: 0.78rem;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(192, 132, 252, 0.15));
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: var(--accent-blue);
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+.quick-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.chip-label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.chip-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.chip-btn:hover {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: var(--accent-blue);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.chat-input-row {
+    display: flex;
+    gap: 12px;
+}
+
+.chat-input {
+    flex: 1;
+    background: #0f1626;
+    border: 1.5px solid #233352;
+    border-radius: 10px;
+    padding: 13px 18px;
+    color: #fff;
+    font-size: 0.96rem;
+    font-family: inherit;
+    outline: none;
+    transition: var(--transition);
+}
+
+.chat-input:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+}
+
+.chat-input::placeholder {
+    color: #475569;
+}
+
+.btn-chat-submit {
+    background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0 24px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
+}
+
+.btn-chat-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.5);
+}
+
+.chat-loading {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.chat-result-box {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.chat-q-bubble {
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 3px solid var(--accent-purple);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #e2e8f0;
+}
+
+.q-icon {
+    margin-right: 6px;
+}
+
+.chat-a-bubble {
+    background: #152035;
+    border: 1px solid #223250;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ai-avatar-badge {
+    align-self: flex-start;
+    padding: 4px 10px;
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 6px;
+    color: var(--accent-blue);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.chat-answer-text {
+    font-size: 0.96rem;
+    line-height: 1.7;
+    color: #f1f5f9;
+    word-break: keep-all;
+    white-space: pre-line;
+}
+
+.chat-key-points {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.key-point-pill {
+    background: rgba(192, 132, 252, 0.12);
+    border: 1px solid rgba(192, 132, 252, 0.3);
+    color: #d8b4fe;
+    font-size: 0.82rem;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+/* Custom Table in Chat */
+.custom-table-container {
+    background: #0f172a;
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-top: 6px;
+}
+
+.custom-table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.table-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.table-info h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.badge-row-count {
+    padding: 2px 8px;
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--accent-blue);
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.custom-table-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-tool-sm {
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-tool-sm:hover {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: var(--accent-blue);
+}
+
 /* Control Panel with Sido & Housing Type */
 .control-panel {
     background: var(--card-bg);

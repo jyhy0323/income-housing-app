@@ -33,7 +33,7 @@
                 <div class="kpi-sub">국세청 연말정산 공식 집계 기준</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-label">전국 주택 가격 상승률</div>
+                <div class="kpi-label">전국 주택 가격 최근 변동률</div>
                 <div class="kpi-value text-accent" id="kpiSeoulGrowth">-</div>
                 <div class="kpi-sub" id="kpiGrowthPeriod">2026.04 대비 2026.09 (한국부동산원)</div>
             </div>
@@ -46,6 +46,82 @@
                 <div class="kpi-label">전국 최고 주거부담 (소득 대비 괴리율 1위)</div>
                 <div class="kpi-value text-warning" id="kpiTopMismatchGu">-</div>
                 <div class="kpi-sub" id="kpiTopMismatchVal">괴리율 -%</div>
+            </div>
+        </section>
+
+        <!-- 🔥 NEW: AI 자연어 질의응답 & 맞춤형 표 생성기 섹션 -->
+        <section class="card chat-query-card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <h2>💬 AI 자유 질문 & 맞춤형 통계 표 생성기</h2>
+                    <p class="card-subtitle">궁금한 점을 자연어로 질문하시면 Gemini 3.5 AI가 전국 148개 시·군·구 통계를 직접 읽고 심층 답변과 <strong>맞춤형 표(Table)</strong>를 도출합니다.</p>
+                </div>
+                <span class="badge-ai-model">Gemini 3.5 Flash Lite Live Engine</span>
+            </div>
+
+            <!-- Quick Question Chips -->
+            <div class="quick-chips">
+                <span class="chip-label">추천 질문:</span>
+                <button class="chip-btn" data-q="연봉 5천만원 이상인 지역들만 뽑아서 비교 표로 보여줘">💡 연봉 5천만 원 이상 지역 표</button>
+                <button class="chip-btn" data-q="부산에서 소득 대비 집값 부담(괴리율)이 가장 높은 5곳을 표로 비교해줘">💡 부산 집값부담 TOP 5 표</button>
+                <button class="chip-btn" data-q="서울 강남구와 경기 성남시(분당)의 소득과 부동산 지표를 표로 대조해줘">💡 강남 vs 성남 분당 대조 표</button>
+                <button class="chip-btn" data-q="소득은 전국 평균 이상이면서 최근 가격 상승률이 가장 낮은 안정적인 가성비 지역 TOP 5를 표로 보여줘">💡 살기 좋은 가성비 지역 TOP 5</button>
+                <button class="chip-btn" data-q="수도권 외 지방에서 1인당 평균 연봉이 가장 높은 상위 5개 지역을 표로 알려줘">💡 비수도권 최고 소득 지역 5곳</button>
+            </div>
+
+            <!-- Question Input Form -->
+            <div class="chat-input-row">
+                <input type="text" id="chatInputText" class="chat-input" placeholder="궁금한 점을 자유롭게 질문하세요 (예: '경기 과천과 화성 비교해줘', '괴리율 130% 넘는 곳 표로 보여줘')">
+                <button id="btnSubmitChat" class="btn-chat-submit">
+                    <span>🚀 AI 분석 & 맞춤 표 생성</span>
+                </button>
+            </div>
+
+            <!-- Chat AI Loading -->
+            <div class="chat-loading" id="chatLoading" style="display: none;">
+                <div class="spinner"></div>
+                <p class="loading-msg" id="chatLoadingMsg">Gemini 3.5가 148개 전국 시·군·구 데이터를 검색하여 맞춤형 표를 작성하고 있습니다...</p>
+            </div>
+
+            <!-- Chat Result Container -->
+            <div class="chat-result-box" id="chatResultBox" style="display: none;">
+                <!-- User Question Header -->
+                <div class="chat-q-bubble">
+                    <span class="q-icon">❓</span> <strong id="chatDisplayQuestion">질문 내용</strong>
+                </div>
+
+                <!-- AI Text Answer -->
+                <div class="chat-a-bubble">
+                    <div class="ai-avatar-badge">🤖 Gemini AI 분석 답변</div>
+                    <p class="chat-answer-text" id="chatAnswerText"></p>
+                    <div class="chat-key-points" id="chatKeyPoints">
+                        <!-- Key bullet points injected here -->
+                    </div>
+                </div>
+
+                <!-- AI Generated Custom Table Section -->
+                <div class="custom-table-container" id="customTableContainer">
+                    <div class="custom-table-header">
+                        <div class="table-info">
+                            <h3 id="customTableTitle">📊 AI 맞춤 추출 결과 표</h3>
+                            <span class="badge-row-count" id="customTableRowCount">0개 지역</span>
+                        </div>
+                        <div class="custom-table-actions">
+                            <button id="btnCopyCustomTable" class="btn-tool-sm">📋 표 복사</button>
+                            <button id="btnDownloadCustomCsv" class="btn-tool-sm">📥 CSV 저장</button>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table" id="customResultTable">
+                            <thead id="customTableHead">
+                                <!-- Headers injected here -->
+                            </thead>
+                            <tbody id="customTableBody">
+                                <!-- Rows injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -118,7 +194,7 @@
                 <div class="card ai-card">
                     <div class="card-header">
                         <div>
-                            <h2>🤖 Gemini 3.5 AI 심층 경제 진단</h2>
+                            <h2>🤖 Gemini 3.5 AI 단일 지역 정밀 리포트</h2>
                             <p class="card-subtitle" id="aiCardSub">지역을 선택하고 AI 진단 버튼을 누르면 자동 생성됩니다.</p>
                         </div>
                         <div class="badge-target" id="aiTargetBadge">선택: 서울 강남구</div>

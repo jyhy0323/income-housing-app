@@ -2,7 +2,7 @@
 """
 app.py
 대한민국 전국 시·군·구별 소득 수준 vs 부동산 가격 통계 분석 웹 애플리케이션
-Flask 백엔드 + Gemini 3.5 Flash Lite 연동 (전국 시·군·구 지원)
++ 이용자 자유 자연어 질문(Q&A) & AI 맞춤형 표 생성 기능 탑재
 """
 
 import os
@@ -56,7 +56,7 @@ def get_data():
 
 @app.route('/api/ai-analyze', methods=['POST'])
 def ai_analyze():
-    """Gemini AI를 통한 전국 특정 시·군·구 심층 경제 진단 리포트 생성"""
+    """Gemini AI를 통한 특정 시·군·구 심층 경제 진단 리포트 생성"""
     if not GEMINI_API_KEY:
         return jsonify({
             'status': 'error',
@@ -66,7 +66,6 @@ def ai_analyze():
     req_data = request.get_json() or {}
     full_name = req_data.get('full_name', '서울 강남구')
     housing_type = req_data.get('type', '아파트')
-    sido = req_data.get('sido', '전체')
 
     try:
         analysis_data = load_and_analyze(housing_type, '전체')
@@ -126,6 +125,107 @@ def ai_analyze():
         return jsonify({
             'status': 'error',
             'message': f"AI 분석 실패: {str(e)}"
+        }), 500
+
+@app.route('/api/chat-query', methods=['POST'])
+def chat_query():
+    """
+    이용자가 입력한 임의의 자연어 질문을 받아 전체 통계 데이터를 분석한 뒤
+    서술형 답변 및 맞춤형 결과 표(Table)를 JSON으로 생성
+    """
+    if not GEMINI_API_KEY:
+        return jsonify({
+            'status': 'error',
+            'message': 'Gemini API 키가 설정되지 않았습니다.'
+        }), 500
+
+    req_data = request.get_json() or {}
+    question = req_data.get('question', '').strip()
+    housing_type = req_data.get('type', '아파트')
+
+    if not question:
+        return jsonify({'status': 'error', 'message': '질문을 입력해 주세요.'}), 400
+
+    try:
+        # 전체 148개 시군구 데이터 로드
+        analysis_data = load_and_analyze(housing_type, '전체')
+        nat_summary = analysis_data['nat_summary']
+        districts = analysis_data['districts']
+
+        # AI에게 전달할 경량 데이터셋 구성
+        compact_rows = []
+        for d in districts:
+            compact_rows.append({
+                "rank": d['nat_income_rank'],
+                "sido": d['sido'],
+                "gu": d['name'],
+                "income": d['avg_income_manwon'],
+                "income_idx": d['income_index'],
+                "price_idx": d['price_index_latest'],
+                "growth": d['growth_rate'],
+                "mismatch": d['mismatch_ratio'],
+                "quad": d['quadrant_label'].split(' ')[0]
+            })
+
+        model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL_NAME,
+            generation_config={"response_mime_type": "application/json"}
+        )
+
+        prompt = f"""
+당신은 대한민국 거시경제 및 국토 통계 전문 AI입니다.
+아래 제공된 대한민국 전국 148개 시·군·구의 공식 통계 데이터(국세청 연말정산 1인당 평균 근로소득 및 한국부동산원 주택 가격지수, 괴리율)를 읽고,
+사용자의 질문에 데이터 기반으로 정확히 답변하며, 질문과 관련된 데이터들을 추출하여 [맞춤형 결과 표]를 구성해 주세요.
+
+[대한민국 전국 공식 통계 데이터 요약]
+- 전국 평균 연봉: {nat_summary['avg_income_manwon']:,}만 원 (전국 소득지수 100 기준점)
+- 전국 평균 가격지수: {nat_summary['price_index_latest']} (최근 6개월 상승률: +{nat_summary['price_growth_rate']}%)
+- 전체 자치구 수: {len(compact_rows)}개
+
+[전체 자치구 148개 데이터셋]
+{json.dumps(compact_rows, ensure_ascii=False)}
+
+[사용자의 질문]
+"{question}"
+
+[작성 지침]
+1. 반드시 실제 데이터셋에 존재하는 수치만을 정확히 인용하세요. 왜곡이나 추정치는 금지합니다.
+2. 답변(answer): 질문자의 의도를 정확히 해결하는 명쾌하고 친절한 경제 통계적 해설 (3~5문장).
+3. 핵심 요약(key_points): 질문과 직결된 핵심 수치 요약 2~3개.
+4. 결과 표(table): 질문에 해당하는 지역들을 선별하거나 비교하여 [제목(title)], [열 목록(headers)], [행 데이터(rows)]로 구성하세요. (예: 특정 금액 이상/이하 지역 목록, 특정 시도 내 순위, 두 지역 1:1 대조 등 질문에 최적화된 표)
+
+반드시 아래 JSON 스키마 규격으로만 응답해 주세요:
+{{
+  "answer": "질문에 대한 정확한 데이터 기반 해설 (줄바꿈 가능, 3~5문장)",
+  "key_points": [
+    "핵심 수치 요약 1",
+    "핵심 수치 요약 2"
+  ],
+  "table": {{
+    "title": "추출 및 분석 결과 표 제목 (예: 전국 연봉 5,000만 원 이상 자치구 비교 표)",
+    "headers": ["전국순위", "시·도", "시·군·구", "1인당 평균연봉(만원)", "전국대비 소득지수", "가격지수", "최근 상승률", "소득대비 괴리율", "4분면 분류"],
+    "rows": [
+      ["#1", "서울", "강남구", "8,419.6", "198.89", "98.50", "+0.33%", "49.52%", "자산집중"]
+    ]
+  }}
+}}
+"""
+
+        response = model.generate_content(prompt)
+        chat_report = json.loads(response.text)
+
+        return jsonify({
+            'status': 'success',
+            'question': question,
+            'result': chat_report,
+            'nat_summary': nat_summary
+        })
+
+    except Exception as e:
+        logging.error(f"[ERROR] AI 질의응답 실패: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': f"AI 질의응답 실패: {str(e)}"
         }), 500
 
 if __name__ == '__main__':
