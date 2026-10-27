@@ -1,13 +1,20 @@
 // static/js/app.js - Nationwide Income & Housing Statistics Analytics Dashboard
-// + AI Chat & Custom Data Table Generator
+// Multi-Dimensional Intelligence Engine: Districts, Quintiles, Macro Regions, Housing Types, and AI Table Q&A
 
 let currentData = null;
 let currentType = '아파트';
 let currentSido = '전체';
 let currentSort = 'nat_income_rank';
 let selectedLocation = '서울 강남구';
+
+// Chart.js Instances
 let quadrantChart = null;
 let rankingChart = null;
+let quintileCompareChart = null;
+let quintileMismatchChart = null;
+let macroRegionsChart = null;
+let macroGrowthChart = null;
+let housingGrowthChart = null;
 
 // 로딩 멘트 순환 타이머
 let loadingInterval = null;
@@ -30,13 +37,56 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initApp() {
+    setupTabNavigation();
     setupEventListeners();
     setupChatEventListeners();
     await loadDashboardData(currentType, currentSido);
 }
 
+// ============================================================================
+// 0. Tab Navigation Controller
+// ============================================================================
+function setupTabNavigation() {
+    const tabBtns = document.querySelectorAll('.nav-tab-btn');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const targetBtn = e.currentTarget;
+            const targetTabId = targetBtn.getAttribute('data-tab');
+
+            tabBtns.forEach(b => b.classList.remove('active'));
+            targetBtn.classList.add('active');
+
+            document.querySelectorAll('.tab-content-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+
+            const activePanel = document.getElementById(targetTabId);
+            if (activePanel) {
+                activePanel.classList.add('active');
+            }
+
+            // Trigger chart resize after tab becomes visible
+            setTimeout(resizeAllCharts, 80);
+        });
+    });
+}
+
+function resizeAllCharts() {
+    const charts = [
+        quadrantChart, rankingChart,
+        quintileCompareChart, quintileMismatchChart,
+        macroRegionsChart, macroGrowthChart,
+        housingGrowthChart
+    ];
+    charts.forEach(c => {
+        if (c) c.resize();
+    });
+}
+
+// ============================================================================
+// 1. Event Listeners for District Filters & Single AI Report
+// ============================================================================
 function setupEventListeners() {
-    // Quick select dropdown
     const quickSelect = document.getElementById('quickGuSelect');
     quickSelect.addEventListener('change', (e) => {
         if (e.target.value) {
@@ -46,13 +96,11 @@ function setupEventListeners() {
         }
     });
 
-    // Run AI Single District Button
     document.getElementById('btnRunAi').addEventListener('click', () => {
         const target = quickSelect.value || selectedLocation || '서울 강남구';
         triggerAiAnalysis(target);
     });
 
-    // Sort buttons
     document.querySelectorAll('.sort-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
@@ -62,14 +110,13 @@ function setupEventListeners() {
         });
     });
 
-    // Copy Report Button
     document.getElementById('btnCopyReport').addEventListener('click', copyReportToClipboard);
-
-    // Download Report Button
     document.getElementById('btnDownloadReport').addEventListener('click', downloadReportMarkdown);
 }
 
-// 🔥 Chat & Custom Table Event Listeners
+// ============================================================================
+// 2. Chat Q&A & Custom Table Event Listeners
+// ============================================================================
 function setupChatEventListeners() {
     const chatInput = document.getElementById('chatInputText');
     const submitBtn = document.getElementById('btnSubmitChat');
@@ -86,7 +133,6 @@ function setupChatEventListeners() {
         }
     });
 
-    // Sample question chips
     document.querySelectorAll('.chip-btn').forEach(chip => {
         chip.addEventListener('click', () => {
             const q = chip.getAttribute('data-q');
@@ -95,14 +141,13 @@ function setupChatEventListeners() {
         });
     });
 
-    // Copy Custom Table
     document.getElementById('btnCopyCustomTable').addEventListener('click', copyCustomTableToClipboard);
-
-    // Download Custom CSV
     document.getElementById('btnDownloadCustomCsv').addEventListener('click', downloadCustomTableCsv);
 }
 
-// 1. Load Data from Backend API
+// ============================================================================
+// 3. Load Main Data from Backend API
+// ============================================================================
 async function loadDashboardData(type, sido) {
     try {
         const response = await fetch(`/api/data?type=${encodeURIComponent(type)}&sido=${encodeURIComponent(sido)}`);
@@ -113,12 +158,18 @@ async function loadDashboardData(type, sido) {
         currentType = type;
         currentSido = sido;
 
+        // Tab 1 Data Rendering
         renderSidoButtons();
         renderTypeButtons();
         renderKPIs();
         populateGuDropdown();
-        renderCharts();
+        renderDistrictCharts();
         renderTable();
+
+        // Multi-dimensional Tabs Rendering
+        renderQuintilesTab();
+        renderMacroRegionsTab();
+        renderHousingTypesTab();
 
         if (!selectedLocation && currentData.districts.length > 0) {
             selectedLocation = currentData.districts[0].full_name;
@@ -131,7 +182,9 @@ async function loadDashboardData(type, sido) {
     }
 }
 
-// 2. Render Sido Filter Buttons
+// ============================================================================
+// 4. Render Sido & Type Filters
+// ============================================================================
 function renderSidoButtons() {
     const container = document.getElementById('sidoButtons');
     container.innerHTML = '';
@@ -149,7 +202,6 @@ function renderSidoButtons() {
     });
 }
 
-// 3. Render Housing Type Buttons
 function renderTypeButtons() {
     const container = document.getElementById('typeButtons');
     container.innerHTML = '';
@@ -167,7 +219,6 @@ function renderTypeButtons() {
     });
 }
 
-// 4. Render Nationwide KPI Summary
 function renderKPIs() {
     const nat = currentData.nat_summary;
     const districts = currentData.districts;
@@ -175,14 +226,12 @@ function renderKPIs() {
     document.getElementById('kpiSeoulIncome').innerText = `${nat.avg_income_manwon.toLocaleString()} 만원`;
     document.getElementById('kpiSeoulGrowth').innerText = `+${nat.price_growth_rate}%`;
 
-    // 1위 연봉 지역 (전국 기준)
     const topIncome = [...districts].sort((a, b) => b.avg_income_manwon - a.avg_income_manwon)[0];
     if (topIncome) {
         document.getElementById('kpiTopIncomeGu').innerText = topIncome.full_name;
         document.getElementById('kpiTopIncomeVal').innerText = `평균 ${topIncome.avg_income_manwon.toLocaleString()}만 원 (전국 1위)`;
     }
 
-    // 1위 괴리율 지역 (소득 대비 주거부담 극대화)
     const topMismatch = [...districts].sort((a, b) => b.mismatch_ratio - a.mismatch_ratio)[0];
     if (topMismatch) {
         document.getElementById('kpiTopMismatchGu').innerText = topMismatch.full_name;
@@ -195,7 +244,6 @@ function renderKPIs() {
     document.getElementById('tableSectionTitle').innerText = `📋 ${regionName} 시·군·구 종합 통계 데이터 시트 (${districts.length}개 지역)`;
 }
 
-// 5. Populate Gu Dropdown
 function populateGuDropdown() {
     const select = document.getElementById('quickGuSelect');
     select.innerHTML = '';
@@ -209,11 +257,13 @@ function populateGuDropdown() {
     });
 }
 
-// 6. Render 4-Quadrant Scatter Chart & Ranking Chart
-function renderCharts() {
+// ============================================================================
+// 5. TAB 1: 4분면 매트릭스 & 순위 바 차트
+// ============================================================================
+function renderDistrictCharts() {
     const districts = currentData.districts;
 
-    // 6-1. Quadrant Scatter Chart
+    // 5-1. Quadrant Scatter Chart
     const ctxQuadrant = document.getElementById('quadrantChart').getContext('2d');
     if (quadrantChart) quadrantChart.destroy();
 
@@ -309,7 +359,7 @@ function renderCharts() {
         }
     });
 
-    // 6-2. Ranking Bar Chart (최대 상위 25개 표시)
+    // 5-2. Ranking Bar Chart (상위 25개 표시)
     const ctxBar = document.getElementById('rankingChart').getContext('2d');
     if (rankingChart) rankingChart.destroy();
 
@@ -370,7 +420,9 @@ function renderCharts() {
     });
 }
 
-// 7. Render Data Table
+// ============================================================================
+// 6. TAB 1: 전국 시·군·구 테이블 렌더링
+// ============================================================================
 function renderTable() {
     const tbody = document.getElementById('dataTableBody');
     tbody.innerHTML = '';
@@ -439,13 +491,419 @@ function highlightTableRow(location) {
 
 function selectAndAnalyzeLocation(location) {
     selectedLocation = location;
-    document.getElementById('quickGuSelect').value = location;
+    const select = document.getElementById('quickGuSelect');
+    if (select) select.value = location;
     document.getElementById('aiTargetBadge').innerText = `선택: ${location}`;
     highlightTableRow(location);
     triggerAiAnalysis(location);
 }
 
-// 8. Gemini AI Single District Report
+// ============================================================================
+// 7. TAB 2: 소득 5분위 계층 분석 (Quintiles)
+// ============================================================================
+function renderQuintilesTab() {
+    if (!currentData || !currentData.quintiles) return;
+    const quintiles = currentData.quintiles;
+    const nat = currentData.nat_summary;
+
+    // 7-1. Quintile Cards Grid
+    const cardsGrid = document.getElementById('quintileCardsGrid');
+    cardsGrid.innerHTML = '';
+
+    const tierColorMap = {
+        1: { cls: 'q1-bg', badge: '1분위 (하위 20%)', color: '#fb923c' },
+        2: { cls: 'q2-bg', badge: '2분위 (소득 20~40%)', color: '#f87171' },
+        3: { cls: 'q3-bg', badge: '3분위 (중위 소득)', color: '#38bdf8' },
+        4: { cls: 'q4-bg', badge: '4분위 (소득 60~80%)', color: '#34d399' },
+        5: { cls: 'q5-bg', badge: '5분위 (최상위 20%)', color: '#c084fc' }
+    };
+
+    quintiles.forEach(q => {
+        const info = tierColorMap[q.tier] || { cls: 'q3-bg', badge: `${q.tier}분위`, color: '#38bdf8' };
+        const card = document.createElement('div');
+        card.className = 'quintile-card';
+        card.innerHTML = `
+            <div class="q-tier-header">
+                <span class="q-badge ${info.cls}">${info.badge}</span>
+                <span style="font-size: 0.78rem; color: #94a3b8;">${q.count}개 자치구</span>
+            </div>
+            <div style="margin: 8px 0 4px;">
+                <span style="font-size: 0.76rem; color: #94a3b8;">평균 1인 연봉</span>
+                <div class="q-income-val" style="color: ${info.color};">${q.avg_income_manwon.toLocaleString()} <span style="font-size: 0.85rem; font-weight: normal; color: #94a3b8;">만원</span></div>
+            </div>
+            <div class="q-detail-row">
+                <span>소득 구간</span>
+                <strong style="color: #cbd5e1;">${q.income_min.toLocaleString()} ~ ${q.income_max.toLocaleString()}만</strong>
+            </div>
+            <div class="q-detail-row">
+                <span>평균 가격지수</span>
+                <strong style="color: #cbd5e1;">${q.avg_price_index}</strong>
+            </div>
+            <div class="q-detail-row">
+                <span>주거부담 괴리율</span>
+                <strong style="color: ${q.avg_mismatch_ratio >= 100 ? '#f87171' : '#34d399'}; font-weight: 700;">${q.avg_mismatch_ratio}%</strong>
+            </div>
+            <div class="q-detail-row">
+                <span>최근 6개월 변동률</span>
+                <strong style="color: ${q.avg_growth_rate >= 0 ? '#f87171' : '#38bdf8'};">${q.avg_growth_rate >= 0 ? '+' : ''}${q.avg_growth_rate}%</strong>
+            </div>
+            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.75rem; color: #94a3b8;">
+                <span style="color: #64748b;">대표:</span> ${(q.sample_districts || []).join(', ')}
+            </div>
+        `;
+        cardsGrid.appendChild(card);
+    });
+
+    // 7-2. Chart: Quintile Compare (Income vs Price Index)
+    const ctxCompare = document.getElementById('chartQuintileCompare').getContext('2d');
+    if (quintileCompareChart) quintileCompareChart.destroy();
+
+    const labels = quintiles.map(q => `${q.tier}분위`);
+    const incomes = quintiles.map(q => q.avg_income_manwon);
+    const priceIndices = quintiles.map(q => q.avg_price_index);
+
+    quintileCompareChart = new Chart(ctxCompare, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '평균 연봉 (만원)',
+                    data: incomes,
+                    backgroundColor: 'rgba(56, 189, 248, 0.85)',
+                    borderRadius: 6,
+                    yAxisID: 'y'
+                },
+                {
+                    label: '평균 주택가격지수',
+                    data: priceIndices,
+                    backgroundColor: 'rgba(192, 132, 252, 0.85)',
+                    borderRadius: 6,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#94a3b8', font: { size: 11, weight: 'bold' } } },
+                tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', padding: 10 }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8' }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: { display: true, text: '평균 연봉 (만 원)', color: '#38bdf8' },
+                    grid: { color: 'rgba(255, 255, 255, 0.06)' },
+                    ticks: { color: '#94a3b8' }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: { display: true, text: '가격 지수 (최신)', color: '#c084fc' },
+                    grid: { drawOnChartArea: false },
+                    ticks: { color: '#94a3b8' }
+                }
+            }
+        }
+    });
+
+    // 7-3. Chart: Quintile Mismatch Ratio Curve
+    const ctxMismatch = document.getElementById('chartQuintileMismatch').getContext('2d');
+    if (quintileMismatchChart) quintileMismatchChart.destroy();
+
+    const mismatches = quintiles.map(q => q.avg_mismatch_ratio);
+
+    quintileMismatchChart = new Chart(ctxMismatch, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '주거부담 괴리율 (%)',
+                data: mismatches,
+                borderColor: '#fb923c',
+                backgroundColor: 'rgba(251, 146, 60, 0.15)',
+                pointBackgroundColor: '#fb923c',
+                pointRadius: 6,
+                pointHoverRadius: 9,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#94a3b8', font: { size: 11, weight: 'bold' } } },
+                tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', padding: 10 }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
+                y: {
+                    title: { display: true, text: '주거부담 괴리율 (%) - 100 초과 시 부담 가중', color: '#fb923c' },
+                    grid: { color: 'rgba(255, 255, 255, 0.06)' },
+                    ticks: { color: '#94a3b8' }
+                }
+            }
+        }
+    });
+
+    // 7-4. Quintiles Table Body
+    const tbody = document.getElementById('quintileTableBody');
+    tbody.innerHTML = '';
+    quintiles.forEach(q => {
+        const info = tierColorMap[q.tier];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong style="color: ${info.color};">${q.tier}분위</strong></td>
+            <td><span class="q-badge ${info.cls}">${info.badge}</span></td>
+            <td>${q.count}개</td>
+            <td>${q.income_min.toLocaleString()}만 ~ ${q.income_max.toLocaleString()}만 원</td>
+            <td><strong>${q.avg_income_manwon.toLocaleString()}만 원</strong></td>
+            <td>${q.avg_income_index}</td>
+            <td>${q.avg_price_index}</td>
+            <td style="color: ${q.avg_growth_rate >= 0 ? '#f87171' : '#38bdf8'}; font-weight: 700;">${q.avg_growth_rate >= 0 ? '+' : ''}${q.avg_growth_rate}%</td>
+            <td><strong class="text-warning">${q.avg_mismatch_ratio}%</strong></td>
+            <td style="color: #94a3b8; font-size: 0.82rem;">${(q.sample_districts || []).join(', ')}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // 7-5. Academic Insight Dynamic Text
+    const q1 = quintiles[0];
+    const q5 = quintiles[quintiles.length - 1];
+    if (q1 && q5) {
+        document.getElementById('quintileInsightText').innerHTML = `
+            전국 148개 자치구 분석 결과, 최상위 5분위(평균 <strong>${q5.avg_income_manwon.toLocaleString()}만원</strong>)와 최하위 1분위(평균 <strong>${q1.avg_income_manwon.toLocaleString()}만원</strong>)의 소득 5분위 배율은 <strong>약 ${nat.income_gap_ratio}배</strong> 수준입니다. 
+            그러나 가격지수에 대한 체감 주거부담 괴리율은 1분위(<strong>${q1.avg_mismatch_ratio}%</strong>)가 5분위(<strong>${q5.avg_mismatch_ratio}%</strong>) 대비 <strong>${nat.mismatch_gap_ratio}배 높아</strong>, 
+            소득이 취약할수록 주택 가격 지수에 대한 체감 주거비 압박을 심하게 겪는 <strong>'주거 부담 역진성(Regressive Housing Burden)'</strong> 현상이 통계적으로 명확히 입증됩니다.
+        `;
+    }
+}
+
+// ============================================================================
+// 8. TAB 3: 6대 권역별 주거 부담 비교 (Macro Regions)
+// ============================================================================
+function renderMacroRegionsTab() {
+    if (!currentData || !currentData.macro_regions) return;
+    const regions = currentData.macro_regions;
+
+    // 8-1. Chart: Macro Regions Income vs Price Index
+    const ctxMacro = document.getElementById('chartMacroRegions').getContext('2d');
+    if (macroRegionsChart) macroRegionsChart.destroy();
+
+    const labels = regions.map(r => r.region_name);
+    const incomes = regions.map(r => r.avg_income_manwon);
+    const prices = regions.map(r => r.avg_price_index);
+
+    macroRegionsChart = new Chart(ctxMacro, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '권역 평균 연봉 (만원)',
+                    data: incomes,
+                    backgroundColor: 'rgba(56, 189, 248, 0.85)',
+                    borderRadius: 6
+                },
+                {
+                    label: '권역 평균 가격지수',
+                    data: prices,
+                    backgroundColor: 'rgba(99, 102, 241, 0.85)',
+                    borderRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#94a3b8', font: { size: 11, weight: 'bold' } } },
+                tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', padding: 10 }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
+                y: { grid: { color: 'rgba(255, 255, 255, 0.06)' }, ticks: { color: '#94a3b8' } }
+            }
+        }
+    });
+
+    // 8-2. Chart: Macro Regions Growth Rate
+    const ctxGrowth = document.getElementById('chartMacroGrowth').getContext('2d');
+    if (macroGrowthChart) macroGrowthChart.destroy();
+
+    const growths = regions.map(r => r.avg_growth_rate);
+
+    macroGrowthChart = new Chart(ctxGrowth, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '최근 6개월 가격 변동률 (%)',
+                data: growths,
+                backgroundColor: growths.map(g => g >= 0 ? 'rgba(248, 113, 113, 0.85)' : 'rgba(56, 189, 248, 0.85)'),
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#94a3b8', font: { size: 11, weight: 'bold' } } },
+                tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', padding: 10 }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
+                y: {
+                    title: { display: true, text: '변동률 (%)', color: '#94a3b8' },
+                    grid: { color: 'rgba(255, 255, 255, 0.06)' },
+                    ticks: { color: '#94a3b8' }
+                }
+            }
+        }
+    });
+
+    // 8-3. Macro Regions Table
+    const tbody = document.getElementById('macroTableBody');
+    tbody.innerHTML = '';
+    regions.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${r.region_name}</strong></td>
+            <td style="color: #94a3b8;">${r.sidos.join(', ')}</td>
+            <td>${r.count}개 자치구</td>
+            <td><strong>${r.avg_income_manwon.toLocaleString()}만 원</strong></td>
+            <td>${r.avg_price_index}</td>
+            <td style="color: ${r.avg_growth_rate >= 0 ? '#f87171' : '#38bdf8'}; font-weight: 700;">${r.avg_growth_rate >= 0 ? '+' : ''}${r.avg_growth_rate}%</td>
+            <td><strong class="text-warning">${r.avg_mismatch_ratio}%</strong></td>
+            <td><span class="table-badge badge-q1">${r.top_income_gu}</span></td>
+            <td><span class="table-badge badge-q2">${r.top_mismatch_gu}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// ============================================================================
+// 9. TAB 4: 주택 유형별 격차 (Housing Types)
+// ============================================================================
+function renderHousingTypesTab() {
+    if (!currentData || !currentData.housing_types_summary) return;
+    const summaries = currentData.housing_types_summary;
+
+    // 9-1. Cards Grid
+    const cardsGrid = document.getElementById('housingTypeCardsGrid');
+    cardsGrid.innerHTML = '';
+
+    const iconMap = {
+        '아파트': '🏢',
+        '종합': '🏘️',
+        '연립다세대': '🏠',
+        '단독주택': '🏡'
+    };
+
+    summaries.forEach(h => {
+        const icon = iconMap[h.type] || '🏠';
+        const card = document.createElement('div');
+        card.className = 'housing-type-card';
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 1.15rem; font-weight: 700; color: #fff;">${icon} ${h.type}</span>
+                <span class="table-badge badge-q3">공식 지표</span>
+            </div>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin: 4px 0 10px;">${h.desc}</p>
+            <div class="q-detail-row">
+                <span>전국 최신 지수</span>
+                <strong>${h.nat_latest_index}</strong>
+            </div>
+            <div class="q-detail-row">
+                <span>전국 최근 변동률</span>
+                <strong style="color: ${h.nat_growth_rate >= 0 ? '#f87171' : '#38bdf8'};">${h.nat_growth_rate >= 0 ? '+' : ''}${h.nat_growth_rate}%</strong>
+            </div>
+            <div class="q-detail-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);">
+                <span>서울 최신 지수</span>
+                <strong>${h.seoul_latest_index}</strong>
+            </div>
+            <div class="q-detail-row">
+                <span>서울 최근 변동률</span>
+                <strong style="color: ${h.seoul_growth_rate >= 0 ? '#f87171' : '#38bdf8'}; font-weight: 700;">${h.seoul_growth_rate >= 0 ? '+' : ''}${h.seoul_growth_rate}%</strong>
+            </div>
+        `;
+        cardsGrid.appendChild(card);
+    });
+
+    // 9-2. Chart: Housing Types Growth (Nationwide vs Seoul)
+    const ctxHousing = document.getElementById('chartHousingTypesGrowth').getContext('2d');
+    if (housingGrowthChart) housingGrowthChart.destroy();
+
+    const labels = summaries.map(h => h.type);
+    const natGrowths = summaries.map(h => h.nat_growth_rate);
+    const seoulGrowths = summaries.map(h => h.seoul_growth_rate);
+
+    housingGrowthChart = new Chart(ctxHousing, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '대한민국 전국 최근 변동률 (%)',
+                    data: natGrowths,
+                    backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                    borderRadius: 6
+                },
+                {
+                    label: '서울특별시 최근 변동률 (%)',
+                    data: seoulGrowths,
+                    backgroundColor: 'rgba(248, 113, 113, 0.85)',
+                    borderRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#94a3b8', font: { size: 11, weight: 'bold' } } },
+                tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', padding: 10 }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
+                y: {
+                    title: { display: true, text: '최근 6개월 변동률 (%)', color: '#94a3b8' },
+                    grid: { color: 'rgba(255, 255, 255, 0.06)' },
+                    ticks: { color: '#94a3b8' }
+                }
+            }
+        }
+    });
+
+    // 9-3. Housing Types Table
+    const tbody = document.getElementById('housingTypeTableBody');
+    tbody.innerHTML = '';
+    summaries.forEach(h => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${h.type}</strong></td>
+            <td style="color: #94a3b8;">${h.desc}</td>
+            <td>${h.nat_latest_index}</td>
+            <td style="color: ${h.nat_growth_rate >= 0 ? '#f87171' : '#38bdf8'}; font-weight: 700;">${h.nat_growth_rate >= 0 ? '+' : ''}${h.nat_growth_rate}%</td>
+            <td><strong>${h.seoul_latest_index}</strong></td>
+            <td style="color: ${h.seoul_growth_rate >= 0 ? '#f87171' : '#38bdf8'}; font-weight: 700;">${h.seoul_growth_rate >= 0 ? '+' : ''}${h.seoul_growth_rate}%</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// ============================================================================
+// 10. Gemini AI Single District Report
+// ============================================================================
 async function triggerAiAnalysis(location) {
     const placeholder = document.getElementById('aiPlaceholder');
     const loading = document.getElementById('aiLoading');
@@ -488,7 +946,6 @@ async function triggerAiAnalysis(location) {
     }
 }
 
-// 9. Render AI Single Report Content
 let lastReportData = null;
 
 function renderAiReport(data) {
@@ -512,7 +969,9 @@ function renderAiReport(data) {
     document.getElementById('reportPolicyText').innerText = report.policy_implication;
 }
 
-// 🔥 10. Execute Chat Query & Custom Table Generation
+// ============================================================================
+// 11. TAB 5: AI Free Chat Query & Custom Table Generation
+// ============================================================================
 let lastChatResult = null;
 
 async function executeChatQuery(question) {
@@ -564,11 +1023,9 @@ function renderChatResult(question, result) {
     const resultBox = document.getElementById('chatResultBox');
     resultBox.style.display = 'flex';
 
-    // Display question and answer
     document.getElementById('chatDisplayQuestion').innerText = question;
     document.getElementById('chatAnswerText').innerText = result.answer;
 
-    // Key points
     const kpContainer = document.getElementById('chatKeyPoints');
     kpContainer.innerHTML = '';
     if (result.key_points && Array.isArray(result.key_points)) {
@@ -580,13 +1037,11 @@ function renderChatResult(question, result) {
         });
     }
 
-    // Render Custom Table
     const tableData = result.table;
     if (tableData) {
         document.getElementById('customTableTitle').innerText = `📊 ${tableData.title || 'AI 맞춤 추출 결과 표'}`;
         document.getElementById('customTableRowCount').innerText = `${tableData.rows ? tableData.rows.length : 0}개 지역 도출`;
 
-        // Headers
         const thead = document.getElementById('customTableHead');
         thead.innerHTML = '';
         const trH = document.createElement('tr');
@@ -597,7 +1052,6 @@ function renderChatResult(question, result) {
         });
         thead.appendChild(trH);
 
-        // Body
         const tbody = document.getElementById('customTableBody');
         tbody.innerHTML = '';
         (tableData.rows || []).forEach(row => {
@@ -605,7 +1059,6 @@ function renderChatResult(question, result) {
             row.forEach((cell, idx) => {
                 const td = document.createElement('td');
                 td.innerText = cell;
-                // Style highlights
                 if (idx === 0) td.style.fontWeight = '700';
                 if (String(cell).includes('%') && (String(cell).includes('+') || String(cell).includes('-'))) {
                     td.style.color = String(cell).includes('+') ? '#f87171' : '#38bdf8';
@@ -617,11 +1070,9 @@ function renderChatResult(question, result) {
         });
     }
 
-    // Smooth scroll down to result box
     resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-// 11. Custom Table Copy & CSV Export
 function copyCustomTableToClipboard() {
     if (!lastChatResult || !lastChatResult.table) return;
 
@@ -647,7 +1098,7 @@ function downloadCustomTableCsv() {
     if (!lastChatResult || !lastChatResult.table) return;
 
     const t = lastChatResult.table;
-    let csv = '\uFEFF'; // UTF-8 BOM
+    let csv = '\uFEFF';
     csv += t.headers.join(',') + '\n';
     t.rows.forEach(r => {
         csv += r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',') + '\n';
@@ -664,7 +1115,9 @@ function downloadCustomTableCsv() {
     URL.revokeObjectURL(url);
 }
 
-// 12. Single Report Markdown Export
+// ============================================================================
+// 12. Single District Report Export (Markdown & Clipboard)
+// ============================================================================
 function generateMarkdownReport() {
     if (!lastReportData) return "";
     const r = lastReportData.report;

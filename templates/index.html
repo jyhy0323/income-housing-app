@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>대한민국 전국 시·군·구 소득 수준 vs 부동산 가격 통계 진단 대시보드</title>
+    <title>대한민국 소득 수준 vs 부동산 가격 자산 양극화 인텔리전스 대시보드</title>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/static/css/style.css">
@@ -16,308 +16,512 @@
         <!-- Header Section -->
         <header class="dashboard-header">
             <div class="header-badge">
-                <span class="badge-dot"></span> 국세청 전국 시·군·구 근로소득 통계 × 한국부동산원 공식 가격지수 결합
+                <span class="badge-dot"></span> 국세청 연말정산 전국 소득 통계 × 한국부동산원 공식 가격지수 결합
             </div>
-            <h1 class="header-title">대한민국 전국 시·군·구 소득 수준 vs 부동산 가격 심층 진단</h1>
+            <h1 class="header-title">대한민국 소득 수준 vs 부동산 가격 자산 양극화 인텔리전스</h1>
             <p class="header-desc">
-                "강남이 가장 비싸지만, 소득도 가장 높을까?" 대한민국 전국 148개 시·군·구의 실제 근로소득(연봉)과 주택 가격지수를 1:1 결합하여<br>
-                전국 기준 소득 대비 부동산 가격 괴리율(Mismatch Ratio)과 주거비 부담 불균형을 실증 분석합니다.
+                전국 148개 시·군·구의 실제 근로소득(연봉)과 주택 가격지수를 결합하여, <strong>소득 5분위 계층 분석</strong>, 
+                <strong>전국 6대 권역 비교</strong>, <strong>주택 유형별 격차</strong>, <strong>AI 맞춤 표 질의응답</strong>까지 다차원으로 탐색합니다.
             </p>
         </header>
 
-        <!-- KPI Summary Cards (전국 기준) -->
+        <!-- KPI Summary Cards (전국 기준 거시 지표) -->
         <section class="kpi-grid" id="kpiGrid">
             <div class="kpi-card">
-                <div class="kpi-label">대한민국 전국 평균 연봉</div>
+                <div class="kpi-label">전국 평균 근로소득 (연봉)</div>
                 <div class="kpi-value" id="kpiSeoulIncome">-</div>
-                <div class="kpi-sub">국세청 연말정산 공식 집계 기준</div>
+                <div class="kpi-sub">국세청 연말정산 공식 통계 (전국 100 기준점)</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-label">전국 주택 가격 최근 변동률</div>
-                <div class="kpi-value text-accent" id="kpiSeoulGrowth">-</div>
-                <div class="kpi-sub" id="kpiGrowthPeriod">2026.04 대비 2026.09 (한국부동산원)</div>
+                <div class="kpi-label">소득 5분위 양극화 배율</div>
+                <div class="kpi-value text-accent" id="kpiIncomeGap">-</div>
+                <div class="kpi-sub" id="kpiIncomeGapSub">상위 20%(5분위) ÷ 하위 20%(1분위)</div>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-label">전국 최고 연봉 1위 시·군·구</div>
+            <div class="kpi-card highlight-card">
+                <div class="kpi-label">전국 최고 연봉 1위 지역</div>
                 <div class="kpi-value text-purple" id="kpiTopIncomeGu">-</div>
                 <div class="kpi-sub" id="kpiTopIncomeVal">평균 연봉 -</div>
             </div>
-            <div class="kpi-card highlight-card">
-                <div class="kpi-label">전국 최고 주거부담 (소득 대비 괴리율 1위)</div>
+            <div class="kpi-card">
+                <div class="kpi-label">전국 최고 주거부담 (괴리율 1위)</div>
                 <div class="kpi-value text-warning" id="kpiTopMismatchGu">-</div>
-                <div class="kpi-sub" id="kpiTopMismatchVal">괴리율 -%</div>
+                <div class="kpi-sub" id="kpiTopMismatchVal">소득 대비 주거부담 경보 지역</div>
             </div>
         </section>
 
-        <!-- 🔥 NEW: AI 자연어 질의응답 & 맞춤형 표 생성기 섹션 -->
-        <section class="card chat-query-card">
-            <div class="card-header">
-                <div class="card-title-group">
-                    <h2>💬 AI 자유 질문 & 맞춤형 통계 표 생성기</h2>
-                    <p class="card-subtitle">궁금한 점을 자연어로 질문하시면 Gemini 3.5 AI가 전국 148개 시·군·구 통계를 직접 읽고 심층 답변과 <strong>맞춤형 표(Table)</strong>를 도출합니다.</p>
-                </div>
-                <span class="badge-ai-model">Gemini 3.5 Flash Lite Live Engine</span>
-            </div>
+        <!-- 🌟 5 Major Exploration Tabs Navigation Bar 🌟 -->
+        <nav class="main-tab-nav">
+            <button class="nav-tab-btn active" data-tab="tab-districts">
+                <span class="tab-icon">📑</span>
+                <span class="tab-text">1. 시·군·구 순위 & 4분면</span>
+            </button>
+            <button class="nav-tab-btn" data-tab="tab-quintiles">
+                <span class="tab-icon">📊</span>
+                <span class="tab-text">2. 소득 5분위 계층 분석</span>
+            </button>
+            <button class="nav-tab-btn" data-tab="tab-macro">
+                <span class="tab-icon">🗺️</span>
+                <span class="tab-text">3. 6대 권역별 주거 부담</span>
+            </button>
+            <button class="nav-tab-btn" data-tab="tab-housing-types">
+                <span class="tab-icon">🏠</span>
+                <span class="tab-text">4. 주택 유형별 격차</span>
+            </button>
+            <button class="nav-tab-btn highlight-tab" data-tab="tab-ai-chat">
+                <span class="tab-icon">💬</span>
+                <span class="tab-text">5. AI 자유 질문 & 표 생성</span>
+            </button>
+        </nav>
 
-            <!-- Quick Question Chips -->
-            <div class="quick-chips">
-                <span class="chip-label">추천 질문:</span>
-                <button class="chip-btn" data-q="연봉 5천만원 이상인 지역들만 뽑아서 비교 표로 보여줘">💡 연봉 5천만 원 이상 지역 표</button>
-                <button class="chip-btn" data-q="부산에서 소득 대비 집값 부담(괴리율)이 가장 높은 5곳을 표로 비교해줘">💡 부산 집값부담 TOP 5 표</button>
-                <button class="chip-btn" data-q="서울 강남구와 경기 성남시(분당)의 소득과 부동산 지표를 표로 대조해줘">💡 강남 vs 성남 분당 대조 표</button>
-                <button class="chip-btn" data-q="소득은 전국 평균 이상이면서 최근 가격 상승률이 가장 낮은 안정적인 가성비 지역 TOP 5를 표로 보여줘">💡 살기 좋은 가성비 지역 TOP 5</button>
-                <button class="chip-btn" data-q="수도권 외 지방에서 1인당 평균 연봉이 가장 높은 상위 5개 지역을 표로 알려줘">💡 비수도권 최고 소득 지역 5곳</button>
-            </div>
-
-            <!-- Question Input Form -->
-            <div class="chat-input-row">
-                <input type="text" id="chatInputText" class="chat-input" placeholder="궁금한 점을 자유롭게 질문하세요 (예: '경기 과천과 화성 비교해줘', '괴리율 130% 넘는 곳 표로 보여줘')">
-                <button id="btnSubmitChat" class="btn-chat-submit">
-                    <span>🚀 AI 분석 & 맞춤 표 생성</span>
-                </button>
-            </div>
-
-            <!-- Chat AI Loading -->
-            <div class="chat-loading" id="chatLoading" style="display: none;">
-                <div class="spinner"></div>
-                <p class="loading-msg" id="chatLoadingMsg">Gemini 3.5가 148개 전국 시·군·구 데이터를 검색하여 맞춤형 표를 작성하고 있습니다...</p>
-            </div>
-
-            <!-- Chat Result Container -->
-            <div class="chat-result-box" id="chatResultBox" style="display: none;">
-                <!-- User Question Header -->
-                <div class="chat-q-bubble">
-                    <span class="q-icon">❓</span> <strong id="chatDisplayQuestion">질문 내용</strong>
-                </div>
-
-                <!-- AI Text Answer -->
-                <div class="chat-a-bubble">
-                    <div class="ai-avatar-badge">🤖 Gemini AI 분석 답변</div>
-                    <p class="chat-answer-text" id="chatAnswerText"></p>
-                    <div class="chat-key-points" id="chatKeyPoints">
-                        <!-- Key bullet points injected here -->
-                    </div>
-                </div>
-
-                <!-- AI Generated Custom Table Section -->
-                <div class="custom-table-container" id="customTableContainer">
-                    <div class="custom-table-header">
-                        <div class="table-info">
-                            <h3 id="customTableTitle">📊 AI 맞춤 추출 결과 표</h3>
-                            <span class="badge-row-count" id="customTableRowCount">0개 지역</span>
-                        </div>
-                        <div class="custom-table-actions">
-                            <button id="btnCopyCustomTable" class="btn-tool-sm">📋 표 복사</button>
-                            <button id="btnDownloadCustomCsv" class="btn-tool-sm">📥 CSV 저장</button>
+        <!-- ============================================================== -->
+        <!-- TAB 1: 148개 시·군·구 순위 & 4분면 매트릭스 탐색                   -->
+        <!-- ============================================================== -->
+        <div class="tab-content-panel active" id="tab-districts">
+            <!-- Filter Controls -->
+            <section class="control-panel">
+                <div class="control-row">
+                    <div class="control-group">
+                        <span class="control-title">📍 시·도 필터:</span>
+                        <div class="sido-buttons" id="sidoButtons">
+                            <!-- Populated dynamically -->
                         </div>
                     </div>
-                    <div class="table-wrapper">
-                        <table class="data-table" id="customResultTable">
-                            <thead id="customTableHead">
-                                <!-- Headers injected here -->
-                            </thead>
-                            <tbody id="customTableBody">
-                                <!-- Rows injected here -->
-                            </tbody>
-                        </table>
+                </div>
+                <div class="control-row secondary-controls">
+                    <div class="control-group">
+                        <span class="control-title">🏠 주택 유형:</span>
+                        <div class="type-buttons" id="typeButtons">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <span class="control-title">🔍 지역 빠른 선택:</span>
+                        <select id="quickGuSelect" class="gu-select">
+                            <option value="">-- 시·군·구 선택 --</option>
+                        </select>
+                        <button id="btnRunAi" class="btn-primary">🤖 정밀 AI 진단</button>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Filter Controls: Housing Type & Province (시도 필터) -->
-        <section class="control-panel">
-            <div class="control-row">
-                <div class="control-group">
-                    <span class="control-title">📍 시·도 지역 필터:</span>
-                    <div class="sido-buttons" id="sidoButtons">
-                        <!-- Populated: 전체, 서울, 경기, 인천, 부산, 대구 등 -->
+            <!-- Main Layout: Charts + AI Card -->
+            <div class="main-layout">
+                <div class="chart-column">
+                    <div class="card chart-card">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <h2 id="quadrantTitle">📊 4분면 매트릭스: 소득 수준 vs 부동산 상승률</h2>
+                                <p class="card-subtitle">점을 클릭하면 해당 지역의 통계와 AI 진단이 즉시 실행됩니다.</p>
+                            </div>
+                            <div class="chart-legend-custom">
+                                <span class="legend-item"><span class="dot q1"></span> Q1 자산집중</span>
+                                <span class="legend-item"><span class="dot q2"></span> Q2 주거부담경보</span>
+                                <span class="legend-item"><span class="dot q3"></span> Q3 서민안정</span>
+                                <span class="legend-item"><span class="dot q4"></span> Q4 신흥성장</span>
+                            </div>
+                        </div>
+                        <div class="canvas-container">
+                            <canvas id="quadrantChart"></canvas>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <div class="control-row secondary-controls">
-                <div class="control-group">
-                    <span class="control-title">🏠 주택 유형:</span>
-                    <div class="type-buttons" id="typeButtons">
-                        <!-- Populated: 아파트, 종합, 연립다세대, 단독주택 -->
-                    </div>
-                </div>
-                <div class="control-group">
-                    <span class="control-title">🔍 시·군·구 AI 진단 빠른 선택:</span>
-                    <select id="quickGuSelect" class="gu-select">
-                        <option value="">-- 시·군·구 선택 --</option>
-                    </select>
-                    <button id="btnRunAi" class="btn-primary">🤖 Gemini AI 심층 진단</button>
-                </div>
-            </div>
-        </section>
 
-        <!-- Main Content: Charts & 4-Quadrant Analysis -->
-        <div class="main-layout">
-            <!-- Left: Scatter / 4-Quadrant Chart & Bar Chart -->
-            <div class="chart-column">
-                <!-- 4-Quadrant Matrix Card -->
-                <div class="card chart-card">
+                    <div class="card chart-card">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <h2 id="rankingTitle">🏆 소득 순위 vs 주거부담 괴리율 (전국 100 기준)</h2>
+                                <p class="card-subtitle">소득 수준(하늘색) 대비 가격지수 부담(주황색)의 불균형을 대조합니다.</p>
+                            </div>
+                        </div>
+                        <div class="canvas-container-bar">
+                            <canvas id="rankingChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ai-column">
+                    <div class="card ai-card">
+                        <div class="card-header">
+                            <div>
+                                <h2>🤖 Gemini 3.5 AI 단일 지역 정밀 리포트</h2>
+                                <p class="card-subtitle" id="aiCardSub">선택된 지역의 공식 통계를 다각도로 분석합니다.</p>
+                            </div>
+                            <div class="badge-target" id="aiTargetBadge">선택: 서울 강남구</div>
+                        </div>
+
+                        <div class="ai-content-box" id="aiContentBox">
+                            <div class="ai-placeholder" id="aiPlaceholder">
+                                <div class="ai-robot-icon">💡</div>
+                                <p><strong>원하시는 시·군·구를 선택</strong>하신 후<br>'정밀 AI 진단' 버튼을 눌러주세요.</p>
+                                <span class="placeholder-tip">예: 서울 강남구, 경기 과천시, 성남시, 울산 남구 등</span>
+                            </div>
+
+                            <div class="ai-loading" id="aiLoading" style="display: none;">
+                                <div class="spinner"></div>
+                                <p class="loading-msg" id="loadingMsg">Gemini 3.5 모델이 전국 공식 통계 데이터를 대조 중입니다...</p>
+                            </div>
+
+                            <div class="ai-result" id="aiResult" style="display: none;">
+                                <div class="report-headline">
+                                    <span class="quote-mark">“</span>
+                                    <span id="reportHeadlineText">헤드라인</span>
+                                    <span class="quote-mark">”</span>
+                                </div>
+
+                                <div class="report-stats-grid">
+                                    <div class="r-stat">
+                                        <span class="r-lbl">1인당 연평균 소득</span>
+                                        <strong class="r-val" id="rIncomeVal">-</strong>
+                                    </div>
+                                    <div class="r-stat">
+                                        <span class="r-lbl">전국 소득 순위</span>
+                                        <strong class="r-val" id="rIncomeRank">-</strong>
+                                    </div>
+                                    <div class="r-stat">
+                                        <span class="r-lbl">주택 가격지수</span>
+                                        <strong class="r-val" id="rPriceVal">-</strong>
+                                    </div>
+                                    <div class="r-stat">
+                                        <span class="r-lbl">소득대비 괴리율</span>
+                                        <strong class="r-val text-warning" id="rMismatchVal">-</strong>
+                                    </div>
+                                </div>
+
+                                <div class="report-section">
+                                    <h4>💼 근로소득 구조 해석</h4>
+                                    <p id="reportIncomeText"></p>
+                                </div>
+
+                                <div class="report-section">
+                                    <h4>🏠 부동산 가격 및 최근 상승 흐름</h4>
+                                    <p id="reportHousingText"></p>
+                                </div>
+
+                                <div class="report-section">
+                                    <h4>⚖️ 소득 vs 부동산 불균형 괴리율 진단</h4>
+                                    <p id="reportMismatchText"></p>
+                                </div>
+
+                                <div class="report-section highlight-sec">
+                                    <h4>🎓 학술 보고서 / 과제 인용 시사점</h4>
+                                    <p id="reportPolicyText"></p>
+                                </div>
+
+                                <div class="report-actions">
+                                    <button id="btnCopyReport" class="btn-secondary">📋 리포트 텍스트 복사</button>
+                                    <button id="btnDownloadReport" class="btn-secondary">📥 마크다운(.md) 저장</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Full Data Table Section -->
+            <section class="card table-card" style="margin-top: 24px;">
+                <div class="card-header table-header-flex">
+                    <div>
+                        <h2 id="tableSectionTitle">📋 전국 시·군·구 종합 통계 데이터 시트</h2>
+                        <p class="card-subtitle">표의 행을 클릭하면 해당 지역의 AI 진단으로 바로 연결됩니다.</p>
+                    </div>
+                    <div class="table-sort-actions">
+                        <span class="sort-title">정렬 기준:</span>
+                        <button class="sort-btn active" data-sort="nat_income_rank">전국 소득순위</button>
+                        <button class="sort-btn" data-sort="mismatch_ratio">주거부담 괴리율</button>
+                        <button class="sort-btn" data-sort="growth_rate">최근 상승률</button>
+                        <button class="sort-btn" data-sort="price_index_latest">가격 지수</button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>전국순위</th>
+                                <th>시·도</th>
+                                <th>시·군·구</th>
+                                <th>1인당 평균 연봉</th>
+                                <th>전국대비 소득지수 (전국=100)</th>
+                                <th>가격지수 (기준월)</th>
+                                <th>가격지수 (최신)</th>
+                                <th>최근 6개월 변동률</th>
+                                <th>소득대비 괴리율</th>
+                                <th>4분면 특성</th>
+                                <th>AI 분석</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 2: 소득 5분위 계층별 자산 양극화 심층 분석                 -->
+        <!-- ============================================================== -->
+        <div class="tab-content-panel" id="tab-quintiles">
+            <!-- Quintiles KPI Card Grid -->
+            <div class="quintile-cards-grid" id="quintileCardsGrid">
+                <!-- Injected by JS: 1분위 ~ 5분위 카드들 -->
+            </div>
+
+            <!-- Quintile Charts (2-Column) -->
+            <div class="two-col-grid" style="margin-top: 24px;">
+                <div class="card">
                     <div class="card-header">
-                        <div class="card-title-group">
-                            <h2 id="quadrantTitle">📊 전국 4분면 매트릭스: 소득 수준 vs 부동산 상승률</h2>
-                            <p class="card-subtitle">점을 클릭하면 해당 지역의 상세 통계와 Gemini AI 심층 진단이 즉시 실행됩니다.</p>
-                        </div>
-                        <div class="chart-legend-custom">
-                            <span class="legend-item"><span class="dot q1"></span> Q1 자산집중</span>
-                            <span class="legend-item"><span class="dot q2"></span> Q2 주거부담경보</span>
-                            <span class="legend-item"><span class="dot q3"></span> Q3 서민안정</span>
-                            <span class="legend-item"><span class="dot q4"></span> Q4 신흥성장</span>
+                        <div>
+                            <h2>📊 소득 5분위별 평균 연봉 vs 주택 가격지수 대조</h2>
+                            <p class="card-subtitle">상위 분위로 갈수록 소득과 주택 지수가 동반 상승하는 양극화 구조를 확인합니다.</p>
                         </div>
                     </div>
                     <div class="canvas-container">
-                        <canvas id="quadrantChart"></canvas>
+                        <canvas id="chartQuintileCompare"></canvas>
                     </div>
                 </div>
 
-                <!-- Ranking Comparison Bar Chart -->
-                <div class="card chart-card">
+                <div class="card">
                     <div class="card-header">
-                        <div class="card-title-group">
-                            <h2 id="rankingTitle">🏆 소득 순위 vs 주거부담 괴리율 (전국 100 기준)</h2>
-                            <p class="card-subtitle">고소득 지역(과천, 성남, 강남 등) vs 저소득·주거비 과부담 지역을 대조합니다.</p>
+                        <div>
+                            <h2>⚖️ 소득 분위별 주거부담 괴리율(Mismatch Ratio) 곡선</h2>
+                            <p class="card-subtitle">소득이 낮은 1~2분위일수록 집값 지수에 대한 체감 주거부담(120%~130%)이 가혹합니다.</p>
                         </div>
                     </div>
-                    <div class="canvas-container-bar">
-                        <canvas id="rankingChart"></canvas>
+                    <div class="canvas-container">
+                        <canvas id="chartQuintileMismatch"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Right: AI Insight Report Card -->
-            <div class="ai-column">
-                <div class="card ai-card">
+            <!-- Quintiles Table -->
+            <div class="card" style="margin-top: 24px;">
+                <div class="card-header">
+                    <div>
+                        <h2>📋 대한민국 소득 5분위별 세부 지표 대조 시트</h2>
+                        <p class="card-subtitle">전국 148개 시·군·구를 소득 순으로 5등분하여 도출한 공식 집계입니다.</p>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>분위</th>
+                                <th>계층 구분</th>
+                                <th>지역 수</th>
+                                <th>소득 범위 (연봉)</th>
+                                <th>평균 연봉</th>
+                                <th>전국대비 소득지수</th>
+                                <th>평균 가격지수</th>
+                                <th>평균 최근 변동률</th>
+                                <th>평균 주거부담 괴리율</th>
+                                <th>포함 대표 자치구</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quintileTableBody">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Academic Insight Box -->
+                <div class="academic-insight-box">
+                    <div class="insight-badge">🏛️ 거시경제 양극화 분석 모델 인사이트</div>
+                    <p id="quintileInsightText">
+                        전국 148개 자치구 분석 결과, 최상위 5분위(평균 5,327만원)와 최하위 1분위(평균 3,279만원)의 소득 5분위 배율은 <strong>약 1.62배</strong> 수준입니다. 
+                        그러나 가격지수에 대한 체감 주거부담 괴리율은 1분위(129.7%)가 5분위(83.3%) 대비 <strong>1.56배 높아</strong>, 
+                        소득이 낮은 계층일수록 최근 주택 가격 상승의 압박을 고스란히 짊어지는 역진적 양극화가 통계로 증명됩니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 3: 전국 6대 권역별 주거 부담 비교                          -->
+        <!-- ============================================================== -->
+        <div class="tab-content-panel" id="tab-macro">
+            <div class="two-col-grid">
+                <div class="card">
                     <div class="card-header">
                         <div>
-                            <h2>🤖 Gemini 3.5 AI 단일 지역 정밀 리포트</h2>
-                            <p class="card-subtitle" id="aiCardSub">지역을 선택하고 AI 진단 버튼을 누르면 자동 생성됩니다.</p>
+                            <h2>🗺️ 6대 권역별 평균 연봉 vs 평균 가격지수 비교</h2>
+                            <p class="card-subtitle">수도권, 동남권(부울경), 충청권, 호남권, 대경권, 강원·제주의 경제 체력 대조</p>
                         </div>
-                        <div class="badge-target" id="aiTargetBadge">선택: 서울 강남구</div>
                     </div>
+                    <div class="canvas-container">
+                        <canvas id="chartMacroRegions"></canvas>
+                    </div>
+                </div>
 
-                    <!-- AI Report Content Container -->
-                    <div class="ai-content-box" id="aiContentBox">
-                        <div class="ai-placeholder" id="aiPlaceholder">
-                            <div class="ai-robot-icon">💡</div>
-                            <p><strong>원하시는 시·군·구를 선택</strong>하신 후<br>'Gemini AI 심층 진단' 버튼을 눌러주세요.</p>
-                            <span class="placeholder-tip">예: 서울 강남구, 경기 과천시, 경기 성남시, 울산 남구 등</span>
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2>📈 권역별 최근 6개월 주택가격 변동 탄력성</h2>
+                            <p class="card-subtitle">어느 권역의 주택 시장이 가장 가파르게 움직이고 있는지 비교합니다.</p>
                         </div>
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="chartMacroGrowth"></canvas>
+                    </div>
+                </div>
+            </div>
 
-                        <!-- Loading State -->
-                        <div class="ai-loading" id="aiLoading" style="display: none;">
-                            <div class="spinner"></div>
-                            <p class="loading-msg" id="loadingMsg">Gemini 3.5 모델이 전국 공식 통계 데이터를 대조 중입니다...</p>
+            <!-- Macro Regions Table -->
+            <div class="card" style="margin-top: 24px;">
+                <div class="card-header">
+                    <div>
+                        <h2>📋 전국 6대 권역별 종합 지표 대조 시트</h2>
+                        <p class="card-subtitle">권역별 평균 소득, 가격지수, 괴리율 및 권역 내 1위 자치구를 한눈에 파악합니다.</p>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>권역명</th>
+                                <th>포함 시·도</th>
+                                <th>분석 지역 수</th>
+                                <th>권역 평균 연봉</th>
+                                <th>권역 평균 가격지수</th>
+                                <th>최근 6개월 변동률</th>
+                                <th>평균 주거부담 괴리율</th>
+                                <th>권역 내 최고 연봉 1위 지역</th>
+                                <th>권역 내 최고 주거부담 1위 지역</th>
+                            </tr>
+                        </thead>
+                        <tbody id="macroTableBody">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 4: 주택 유형별(아파트 vs 연립·다세대 vs 단독) 격차         -->
+        <!-- ============================================================== -->
+        <div class="tab-content-panel" id="tab-housing-types">
+            <div class="housing-type-cards-grid" id="housingTypeCardsGrid">
+                <!-- Injected by JS: 아파트, 종합, 연립다세대, 단독주택 카드 -->
+            </div>
+
+            <div class="two-col-grid" style="margin-top: 24px;">
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2>🏠 주택 유형별 최근 6개월 변동률 격차 (전국 vs 서울)</h2>
+                            <p class="card-subtitle">아파트 중심의 자산 상승과 서민 주거용 빌라·연립의 상대적 정체 흐름 대조</p>
                         </div>
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="chartHousingTypesGrowth"></canvas>
+                    </div>
+                </div>
 
-                        <!-- Result Section -->
-                        <div class="ai-result" id="aiResult" style="display: none;">
-                            <!-- Headline -->
-                            <div class="report-headline">
-                                <span class="quote-mark">“</span>
-                                <span id="reportHeadlineText">헤드라인</span>
-                                <span class="quote-mark">”</span>
-                            </div>
-
-                            <!-- Mini Stat Grid -->
-                            <div class="report-stats-grid">
-                                <div class="r-stat">
-                                    <span class="r-lbl">1인당 연평균 소득</span>
-                                    <strong class="r-val" id="rIncomeVal">-</strong>
-                                </div>
-                                <div class="r-stat">
-                                    <span class="r-lbl">전국 소득 순위</span>
-                                    <strong class="r-val" id="rIncomeRank">-</strong>
-                                </div>
-                                <div class="r-stat">
-                                    <span class="r-lbl">주택 가격지수</span>
-                                    <strong class="r-val" id="rPriceVal">-</strong>
-                                </div>
-                                <div class="r-stat">
-                                    <span class="r-lbl">소득대비 괴리율</span>
-                                    <strong class="r-val text-warning" id="rMismatchVal">-</strong>
-                                </div>
-                            </div>
-
-                            <!-- Analysis Sections -->
-                            <div class="report-section">
-                                <h4>💼 근로소득 구조 해석</h4>
-                                <p id="reportIncomeText"></p>
-                            </div>
-
-                            <div class="report-section">
-                                <h4>🏠 부동산 가격 및 최근 상승 흐름</h4>
-                                <p id="reportHousingText"></p>
-                            </div>
-
-                            <div class="report-section">
-                                <h4>⚖️ 소득 vs 부동산 불균형 괴리율 진단</h4>
-                                <p id="reportMismatchText"></p>
-                            </div>
-
-                            <div class="report-section highlight-sec">
-                                <h4>🎓 학술 보고서 / 과제 인용 시사점</h4>
-                                <p id="reportPolicyText"></p>
-                            </div>
-
-                            <!-- Actions: Copy & Download -->
-                            <div class="report-actions">
-                                <button id="btnCopyReport" class="btn-secondary">📋 리포트 텍스트 복사</button>
-                                <button id="btnDownloadReport" class="btn-secondary">📥 마크다운(.md) 저장</button>
-                            </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2>📋 주택 유형별 최신 가격지표 요약</h2>
+                            <p class="card-subtitle">한국부동산원 전국주택가격동향조사 공식 지표</p>
                         </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>주택 유형</th>
+                                    <th>유형 특성</th>
+                                    <th>전국 최신지수</th>
+                                    <th>전국 최근변동률</th>
+                                    <th>서울 최신지수</th>
+                                    <th>서울 최근변동률</th>
+                                </tr>
+                            </thead>
+                            <tbody id="housingTypeTableBody">
+                                <!-- Injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="academic-insight-box" style="margin-top: 14px;">
+                        <div class="insight-badge">💡 주택 유형별 주거 양극화 시사점</div>
+                        <p>
+                            아파트는 전국 평균 +1.53%, 서울 기준 +4.92%로 높은 가격 상승 탄력성을 보이며 자산 축적 수단으로 확고히 작동하는 반면, 
+                            서민·청년층의 주요 주거 사다리인 연립·다세대(빌라)는 상대적으로 상승 탄력이 둔화되어 주거 형태 간 자산 형성의 양극화가 심화되고 있습니다.
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Full Data Table Section -->
-        <section class="card table-card">
-            <div class="card-header table-header-flex">
-                <div>
-                    <h2 id="tableSectionTitle">📋 전국 시·군·구 종합 통계 데이터 시트</h2>
-                    <p class="card-subtitle">표의 행을 클릭하면 해당 지역의 AI 진단으로 바로 연결됩니다.</p>
+        <!-- ============================================================== -->
+        <!-- TAB 5: AI 자유 질문 & 맞춤형 표 생성기                        -->
+        <!-- ============================================================== -->
+        <div class="tab-content-panel" id="tab-ai-chat">
+            <section class="card chat-query-card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <h2>💬 AI 자유 질문 & 맞춤형 통계 표 생성기</h2>
+                        <p class="card-subtitle">궁금한 점을 자연어로 질문하시면 Gemini 3.5 AI가 전국 148개 시·군·구 통계를 직접 읽고 심층 답변과 <strong>맞춤형 표(Table)</strong>를 도출합니다.</p>
+                    </div>
+                    <span class="badge-ai-model">Gemini 3.5 Flash Lite Live Engine</span>
                 </div>
-                <div class="table-sort-actions">
-                    <span class="sort-title">정렬 기준:</span>
-                    <button class="sort-btn active" data-sort="nat_income_rank">전국 소득순위</button>
-                    <button class="sort-btn" data-sort="mismatch_ratio">주거부담 괴리율</button>
-                    <button class="sort-btn" data-sort="growth_rate">최근 상승률</button>
-                    <button class="sort-btn" data-sort="price_index_latest">가격 지수</button>
+
+                <div class="quick-chips">
+                    <span class="chip-label">추천 질문:</span>
+                    <button class="chip-btn" data-q="연봉 5천만원 이상인 지역들만 뽑아서 비교 표로 보여줘">💡 연봉 5천만 원 이상 지역 표</button>
+                    <button class="chip-btn" data-q="부산에서 소득 대비 집값 부담(괴리율)이 가장 높은 5곳을 표로 비교해줘">💡 부산 집값부담 TOP 5 표</button>
+                    <button class="chip-btn" data-q="서울 강남구와 경기 성남시(분당)의 소득과 부동산 지표를 표로 대조해줘">💡 강남 vs 성남 분당 대조 표</button>
+                    <button class="chip-btn" data-q="소득은 전국 평균 이상이면서 최근 가격 상승률이 가장 낮은 안정적인 가성비 지역 TOP 5를 표로 보여줘">💡 살기 좋은 가성비 지역 TOP 5</button>
+                    <button class="chip-btn" data-q="수도권 외 지방에서 1인당 평균 연봉이 가장 높은 상위 5개 지역을 표로 알려줘">💡 비수도권 최고 소득 지역 5곳</button>
                 </div>
-            </div>
-            <div class="table-wrapper">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>전국순위</th>
-                            <th>시·도</th>
-                            <th>시·군·구</th>
-                            <th>1인당 평균 연봉</th>
-                            <th>전국대비 소득지수 (전국=100)</th>
-                            <th>가격지수 (기준월)</th>
-                            <th>가격지수 (최신)</th>
-                            <th>최근 6개월 변동률</th>
-                            <th>소득대비 괴리율</th>
-                            <th>4분면 특성</th>
-                            <th>AI 분석</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dataTableBody">
-                        <!-- Populated by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
+
+                <div class="chat-input-row">
+                    <input type="text" id="chatInputText" class="chat-input" placeholder="궁금한 점을 자유롭게 질문하세요 (예: '경기 과천과 화성 비교해줘', '괴리율 130% 넘는 곳 표로 보여줘')">
+                    <button id="btnSubmitChat" class="btn-chat-submit">
+                        <span>🚀 AI 분석 & 맞춤 표 생성</span>
+                    </button>
+                </div>
+
+                <div class="chat-loading" id="chatLoading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p class="loading-msg" id="chatLoadingMsg">Gemini 3.5가 148개 전국 시·군·구 데이터를 검색하여 맞춤형 표를 작성하고 있습니다...</p>
+                </div>
+
+                <div class="chat-result-box" id="chatResultBox" style="display: none;">
+                    <div class="chat-q-bubble">
+                        <span class="q-icon">❓</span> <strong id="chatDisplayQuestion">질문 내용</strong>
+                    </div>
+
+                    <div class="chat-a-bubble">
+                        <div class="ai-avatar-badge">🤖 Gemini AI 분석 답변</div>
+                        <p class="chat-answer-text" id="chatAnswerText"></p>
+                        <div class="chat-key-points" id="chatKeyPoints"></div>
+                    </div>
+
+                    <div class="custom-table-container" id="customTableContainer">
+                        <div class="custom-table-header">
+                            <div class="table-info">
+                                <h3 id="customTableTitle">📊 AI 맞춤 추출 결과 표</h3>
+                                <span class="badge-row-count" id="customTableRowCount">0개 지역</span>
+                            </div>
+                            <div class="custom-table-actions">
+                                <button id="btnCopyCustomTable" class="btn-tool-sm">📋 표 복사</button>
+                                <button id="btnDownloadCustomCsv" class="btn-tool-sm">📥 CSV 저장</button>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="data-table" id="customResultTable">
+                                <thead id="customTableHead"></thead>
+                                <tbody id="customTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
 
         <!-- Footer -->
         <footer class="dashboard-footer">
             <p>데이터 출처: 국세청 국세통계포털(TASIS) 전국 시·군·구별 근로소득 연말정산 신고현황 & 한국부동산원(R-ONE) 전국주택가격동향조사</p>
-            <p>© 2026 AI Study - Nationwide Income & Housing Statistics Analyzer. Powered by Google Gemini 3.5 Flash Lite.</p>
+            <p>© 2026 AI Study - Nationwide Income & Housing Statistics Intelligence Dashboard. Powered by Google Gemini 3.5 Flash Lite.</p>
         </footer>
     </div>
 
