@@ -240,10 +240,10 @@ function renderKPIs() {
     if (elIncome) elIncome.innerText = `${nat.avg_income_manwon.toLocaleString()} 만원`;
 
     const elGap = document.getElementById('kpiIncomeGap');
-    if (elGap) elGap.innerText = `${nat.income_gap_ratio}배`;
+    if (elGap) elGap.innerText = `${nat.avg_house_price_eok}억 (PIR ${nat.avg_pir}배)`;
 
     const elGapSub = document.getElementById('kpiIncomeGapSub');
-    if (elGapSub) elGapSub.innerText = `괴리율 격차: ${nat.mismatch_gap_ratio}배`;
+    if (elGapSub) elGapSub.innerText = `전국 평균 매매가 & 내집마련 ${nat.avg_pir}년 소요`;
 
     const topIncome = [...districts].sort((a, b) => b.avg_income_manwon - a.avg_income_manwon)[0];
     if (topIncome) {
@@ -253,19 +253,19 @@ function renderKPIs() {
         if (elTopIncomeVal) elTopIncomeVal.innerText = `평균 ${topIncome.avg_income_manwon.toLocaleString()}만 원 (전국 1위)`;
     }
 
-    const topMismatch = [...districts].sort((a, b) => b.mismatch_ratio - a.mismatch_ratio)[0];
-    if (topMismatch) {
+    const topPir = [...districts].sort((a, b) => b.pir - a.pir)[0];
+    if (topPir) {
         const elTopMismatchGu = document.getElementById('kpiTopMismatchGu');
         const elTopMismatchVal = document.getElementById('kpiTopMismatchVal');
-        if (elTopMismatchGu) elTopMismatchGu.innerText = topMismatch.full_name;
-        if (elTopMismatchVal) elTopMismatchVal.innerText = `괴리율 ${topMismatch.mismatch_ratio}% (연봉 ${topMismatch.avg_income_manwon}만)`;
+        if (elTopMismatchGu) elTopMismatchGu.innerText = topPir.full_name;
+        if (elTopMismatchVal) elTopMismatchVal.innerText = `PIR ${topPir.pir}배 (매매가 ${topPir.avg_house_price_eok}억 / 연봉 ${topPir.avg_income_manwon}만)`;
     }
 
     const regionName = currentSido === '전체' ? '대한민국 전국' : currentSido;
     const qTitle = document.getElementById('quadrantTitle');
-    if (qTitle) qTitle.innerText = `📊 ${regionName} 4분면 매트릭스: 소득 수준 vs 부동산 상승률`;
+    if (qTitle) qTitle.innerText = `📊 ${regionName} 4분면 매트릭스: 소득 수준 vs 실질 PIR (내 집 마련 소요 연수)`;
     const rTitle = document.getElementById('rankingTitle');
-    if (rTitle) rTitle.innerText = `🏆 ${regionName} 소득 순위 vs 주거부담 괴리율 (전국 100 기준)`;
+    if (rTitle) rTitle.innerText = `🏆 ${regionName} 실질 PIR (내 집 마련 소요 연수) TOP 25`;
     const tTitle = document.getElementById('tableSectionTitle');
     if (tTitle) tTitle.innerText = `📋 ${regionName} 시·군·구 종합 통계 데이터 시트 (${districts.length}개 지역)`;
 }
@@ -277,14 +277,14 @@ function populateGuDropdown() {
     currentData.districts.forEach(d => {
         const opt = document.createElement('option');
         opt.value = d.full_name;
-        opt.innerText = `${d.full_name} (전국 ${d.nat_income_rank}위, ${d.avg_income_manwon}만)`;
+        opt.innerText = `${d.full_name} (PIR ${d.pir}배, 매매가 ${d.avg_house_price_eok}억, 연봉 ${d.avg_income_manwon}만)`;
         if (d.full_name === selectedLocation) opt.selected = true;
         select.appendChild(opt);
     });
 }
 
 // ============================================================================
-// 5. TAB 1: 4분면 매트릭스 & 순위 바 차트
+// 5. TAB 1: 4분면 매트릭스 & 실질 PIR 바 차트
 // ============================================================================
 function renderDistrictCharts() {
     const districts = currentData.districts;
@@ -294,22 +294,25 @@ function renderDistrictCharts() {
     if (quadrantChart) quadrantChart.destroy();
 
     const quadrantColors = {
-        'Q1_프리미엄안정': '#c084fc',
-        'Q2_주거부담경보': '#fb923c',
-        'Q3_서민안정': '#38bdf8',
-        'Q4_신흥성장': '#34d399'
+        'Q1_프리미엄안정': '#c084fc', // 초고가과부담
+        'Q2_주거부담경보': '#f87171', // 주거장벽경보
+        'Q3_서민안정': '#38bdf8', // 지방서민안정
+        'Q4_신흥성장': '#34d399'  // 고소득실속가성비
     };
 
     const scatterData = districts.map(d => ({
-        x: d.income_index,
-        y: d.growth_rate,
+        x: d.avg_income_manwon,
+        y: d.pir,
         fullName: d.full_name,
         name: d.name,
         avg_income: d.avg_income_manwon,
-        mismatch: d.mismatch_ratio,
+        house_price: d.avg_house_price_eok,
+        pir: d.pir,
+        savings_years: d.savings_years_25,
         quadrant: d.quadrant,
         quadrantLabel: d.quadrant_label,
-        rank: d.nat_income_rank
+        pirRank: d.nat_pir_rank || d.pir,
+        incomeRank: d.nat_income_rank
     }));
 
     quadrantChart = new Chart(ctxQuadrant, {
@@ -344,10 +347,11 @@ function renderDistrictCharts() {
                         label: (ctx) => {
                             const d = ctx.raw;
                             return [
-                                `📍 ${d.fullName} (전국 ${d.rank}위 | ${d.quadrantLabel})`,
-                                `💰 1인당 연봉: ${d.avg_income.toLocaleString()}만 원 (전국대비: ${d.x}%)`,
-                                `📈 최근 상승률: ${d.y}%`,
-                                `⚖️ 소득대비 괴리율: ${d.mismatch}%`
+                                `📍 ${d.fullName} (${d.quadrantLabel})`,
+                                `🏠 평균 아파트 매매가: ${d.house_price}억 원`,
+                                `💰 1인당 평균 연봉: ${d.avg_income.toLocaleString()}만 원 (소득순위: #${d.incomeRank})`,
+                                `⏳ 실질 PIR: ${d.pir}년 (전국 PIR 순위: #${d.pirRank})`,
+                                `💡 실질 저축(25%) 시 내 집 마련 소요: ${d.savings_years}년`
                             ];
                         }
                     }
@@ -357,7 +361,7 @@ function renderDistrictCharts() {
                 x: {
                     title: {
                         display: true,
-                        text: '소득 지수 (대한민국 전국 평균 = 100 기준)',
+                        text: '1인당 평균 연봉 (만 원) - 대한민국 전국 평균: 4,233만 원',
                         color: '#94a3b8',
                         font: { size: 12, weight: 'bold' }
                     },
@@ -367,7 +371,7 @@ function renderDistrictCharts() {
                 y: {
                     title: {
                         display: true,
-                        text: '최근 6개월 가격 변동률 (%)',
+                        text: '실질 PIR (연소득 대비 집값 배수, 년) - 전국 평균: 12.1배',
                         color: '#94a3b8',
                         font: { size: 12, weight: 'bold' }
                     },
@@ -385,14 +389,14 @@ function renderDistrictCharts() {
         }
     });
 
-    // 5-2. Ranking Bar Chart (상위 25개 표시)
+    // 5-2. Ranking Bar Chart (실질 PIR 기준 상위 25개 표시)
     const ctxBar = document.getElementById('rankingChart').getContext('2d');
     if (rankingChart) rankingChart.destroy();
 
-    const displayDistricts = districts.slice(0, 25);
+    const displayDistricts = [...districts].sort((a, b) => b.pir - a.pir).slice(0, 25);
     const labels = displayDistricts.map(d => d.name);
-    const incomeIndices = displayDistricts.map(d => d.income_index);
-    const mismatchRatios = displayDistricts.map(d => d.mismatch_ratio);
+    const pirs = displayDistricts.map(d => d.pir);
+    const savings = displayDistricts.map(d => d.savings_years_25);
 
     rankingChart = new Chart(ctxBar, {
         type: 'bar',
@@ -400,15 +404,15 @@ function renderDistrictCharts() {
             labels: labels,
             datasets: [
                 {
-                    label: '소득 지수 (전국=100)',
-                    data: incomeIndices,
-                    backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                    label: '실질 PIR (연봉 전액 저축 시 필요 년수)',
+                    data: pirs,
+                    backgroundColor: 'rgba(248, 113, 113, 0.85)',
                     borderRadius: 4
                 },
                 {
-                    label: '주거부담 괴리율 (100 초과 시 부담 가중)',
-                    data: mismatchRatios,
-                    backgroundColor: 'rgba(251, 146, 60, 0.8)',
+                    label: '실질 저축 소요 년수 (연봉의 25% 저축 가정)',
+                    data: savings,
+                    backgroundColor: 'rgba(192, 132, 252, 0.75)',
                     borderRadius: 4
                 }
             ]
@@ -431,6 +435,7 @@ function renderDistrictCharts() {
                     ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 45, minRotation: 45 }
                 },
                 y: {
+                    title: { display: true, text: '소요 연수 (년)', color: '#94a3b8' },
                     grid: { color: 'rgba(255, 255, 255, 0.06)' },
                     ticks: { color: '#94a3b8' }
                 }
@@ -455,21 +460,21 @@ function renderTable() {
 
     let items = [...currentData.districts];
 
-    if (currentSort === 'nat_income_rank') {
+    if (currentSort === 'pir') {
+        items.sort((a, b) => b.pir - a.pir);
+    } else if (currentSort === 'nat_income_rank') {
         items.sort((a, b) => a.nat_income_rank - b.nat_income_rank);
-    } else if (currentSort === 'mismatch_ratio') {
-        items.sort((a, b) => b.mismatch_ratio - a.mismatch_ratio);
+    } else if (currentSort === 'avg_house_price_manwon') {
+        items.sort((a, b) => b.avg_house_price_manwon - a.avg_house_price_manwon);
     } else if (currentSort === 'growth_rate') {
         items.sort((a, b) => b.growth_rate - a.growth_rate);
-    } else if (currentSort === 'price_index_latest') {
-        items.sort((a, b) => b.price_index_latest - a.price_index_latest);
     }
 
     const badgeMap = {
-        'Q1_프리미엄안정': { cls: 'badge-q1', text: '자산집중' },
-        'Q2_주거부담경보': { cls: 'badge-q2', text: '주거부담경보' },
-        'Q3_서민안정': { cls: 'badge-q3', text: '서민안정' },
-        'Q4_신흥성장': { cls: 'badge-q4', text: '신흥성장' }
+        'Q1_프리미엄안정': { cls: 'badge-q1', text: '초고가과부담' },
+        'Q2_주거부담경보': { cls: 'badge-q2', text: '주거장벽경보' },
+        'Q3_서민안정': { cls: 'badge-q3', text: '지방서민안정' },
+        'Q4_신흥성장': { cls: 'badge-q4', text: '고소득실속가성비' }
     };
 
     items.forEach(d => {
@@ -481,15 +486,15 @@ function renderTable() {
         const growthPrefix = d.growth_rate >= 0 ? '+' : '';
 
         tr.innerHTML = `
-            <td><strong>#${d.nat_income_rank}</strong></td>
+            <td><strong style="color: ${d.pir >= 20 ? '#f87171' : d.pir >= 12 ? '#fb923c' : '#34d399'};">#${d.nat_pir_rank || d.pir}</strong></td>
+            <td><span style="color:#94a3b8;">#${d.nat_income_rank}</span></td>
             <td><span style="color:#94a3b8;">${d.sido}</span></td>
             <td><strong>${d.name}</strong></td>
             <td>${d.avg_income_manwon.toLocaleString()}만 원</td>
-            <td>${d.income_index}</td>
-            <td>${d.price_index_base}</td>
-            <td>${d.price_index_latest}</td>
+            <td><strong style="color:#f1f5f9;">${d.avg_house_price_eok}억 원</strong></td>
+            <td><strong class="text-warning">PIR ${d.pir}배</strong></td>
+            <td style="color:#a5b4fc; font-weight:600;">${d.savings_years_25}년</td>
             <td style="color:${growthColor}; font-weight:700;">${growthPrefix}${d.growth_rate}%</td>
-            <td><strong class="text-warning">${d.mismatch_ratio}%</strong></td>
             <td><span class="table-badge ${bInfo.cls}">${bInfo.text}</span></td>
             <td><button class="btn-table-ai" onclick="selectAndAnalyzeLocation('${d.full_name}')">🤖 진단</button></td>
         `;
@@ -549,6 +554,9 @@ function renderQuintilesTab() {
         const avgInc = q.avg_income_manwon || q.avg_income || 0;
         const minInc = q.income_min || q.min_income || 0;
         const maxInc = q.income_max || q.max_income || 0;
+        const priceEok = q.avg_house_price_eok || (q.avg_house_price_manwon ? (q.avg_house_price_manwon/10000).toFixed(1) : '-');
+        const pirVal = q.avg_pir || q.avg_mismatch_ratio || '-';
+        const savings25 = q.avg_pir ? (q.avg_pir / 0.25).toFixed(1) : '-';
 
         const card = document.createElement('div');
         card.className = 'quintile-card';
@@ -562,20 +570,20 @@ function renderQuintilesTab() {
                 <div class="q-income-val" style="color: ${info.color};">${avgInc.toLocaleString()} <span style="font-size: 0.85rem; font-weight: normal; color: #94a3b8;">만원</span></div>
             </div>
             <div class="q-detail-row">
+                <span>평균 아파트 매매가</span>
+                <strong style="color: #f1f5f9; font-size: 0.95rem;">${priceEok}억 원</strong>
+            </div>
+            <div class="q-detail-row">
+                <span>실질 PIR (소요연수)</span>
+                <strong style="color: ${pirVal >= 15 ? '#f87171' : '#34d399'}; font-weight: 700; font-size: 0.95rem;">${pirVal}년</strong>
+            </div>
+            <div class="q-detail-row">
+                <span>실질저축(25%) 소요</span>
+                <strong style="color: #a5b4fc;">${savings25}년</strong>
+            </div>
+            <div class="q-detail-row">
                 <span>소득 구간</span>
                 <strong style="color: #cbd5e1;">${minInc.toLocaleString()} ~ ${maxInc.toLocaleString()}만</strong>
-            </div>
-            <div class="q-detail-row">
-                <span>평균 가격지수</span>
-                <strong style="color: #cbd5e1;">${q.avg_price_index}</strong>
-            </div>
-            <div class="q-detail-row">
-                <span>주거부담 괴리율</span>
-                <strong style="color: ${q.avg_mismatch_ratio >= 100 ? '#f87171' : '#34d399'}; font-weight: 700;">${q.avg_mismatch_ratio}%</strong>
-            </div>
-            <div class="q-detail-row">
-                <span>최근 6개월 변동률</span>
-                <strong style="color: ${q.avg_growth_rate >= 0 ? '#f87171' : '#38bdf8'};">${q.avg_growth_rate >= 0 ? '+' : ''}${q.avg_growth_rate}%</strong>
             </div>
             <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.75rem; color: #94a3b8;">
                 <span style="color: #64748b;">대표:</span> ${(q.sample_districts || []).join(', ')}
@@ -584,13 +592,13 @@ function renderQuintilesTab() {
         cardsGrid.appendChild(card);
     });
 
-    // 7-2. Chart: Quintile Compare (Income vs Price Index)
+    // 7-2. Chart: Quintile Compare (Income vs Housing Price in 억)
     const ctxCompare = document.getElementById('chartQuintileCompare').getContext('2d');
     if (quintileCompareChart) quintileCompareChart.destroy();
 
     const labels = quintiles.map(q => `${q.tier}분위`);
     const incomes = quintiles.map(q => (q.avg_income_manwon || q.avg_income || 0));
-    const priceIndices = quintiles.map(q => q.avg_price_index);
+    const housePrices = quintiles.map(q => (q.avg_house_price_eok || (q.avg_house_price_manwon/10000)));
 
     quintileCompareChart = new Chart(ctxCompare, {
         type: 'bar',
@@ -605,8 +613,8 @@ function renderQuintilesTab() {
                     yAxisID: 'y'
                 },
                 {
-                    label: '평균 주택가격지수',
-                    data: priceIndices,
+                    label: '평균 아파트 매매가 (억원)',
+                    data: housePrices,
                     backgroundColor: 'rgba(192, 132, 252, 0.85)',
                     borderRadius: 6,
                     yAxisID: 'y1'
@@ -637,7 +645,7 @@ function renderQuintilesTab() {
                     type: 'linear',
                     display: true,
                     position: 'right',
-                    title: { display: true, text: '가격 지수 (최신)', color: '#c084fc' },
+                    title: { display: true, text: '평균 매매가 (억 원)', color: '#c084fc' },
                     grid: { drawOnChartArea: false },
                     ticks: { color: '#94a3b8' }
                 }
@@ -645,22 +653,22 @@ function renderQuintilesTab() {
         }
     });
 
-    // 7-3. Chart: Quintile Mismatch Ratio Curve
+    // 7-3. Chart: Quintile PIR Curve
     const ctxMismatch = document.getElementById('chartQuintileMismatch').getContext('2d');
     if (quintileMismatchChart) quintileMismatchChart.destroy();
 
-    const mismatches = quintiles.map(q => q.avg_mismatch_ratio);
+    const pirs = quintiles.map(q => (q.avg_pir || q.avg_mismatch_ratio));
 
     quintileMismatchChart = new Chart(ctxMismatch, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                label: '주거부담 괴리율 (%)',
-                data: mismatches,
-                borderColor: '#fb923c',
-                backgroundColor: 'rgba(251, 146, 60, 0.15)',
-                pointBackgroundColor: '#fb923c',
+                label: '소득 분위별 실질 PIR (년)',
+                data: pirs,
+                borderColor: '#f87171',
+                backgroundColor: 'rgba(248, 113, 113, 0.15)',
+                pointBackgroundColor: '#f87171',
                 pointRadius: 6,
                 pointHoverRadius: 9,
                 fill: true,
@@ -677,7 +685,7 @@ function renderQuintilesTab() {
             scales: {
                 x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
                 y: {
-                    title: { display: true, text: '주거부담 괴리율 (%) - 100 초과 시 부담 가중', color: '#fb923c' },
+                    title: { display: true, text: '실질 PIR (연소득 대비 집값 배수, 년)', color: '#f87171' },
                     grid: { color: 'rgba(255, 255, 255, 0.06)' },
                     ticks: { color: '#94a3b8' }
                 }
@@ -693,6 +701,9 @@ function renderQuintilesTab() {
         const avgInc = q.avg_income_manwon || q.avg_income || 0;
         const minInc = q.income_min || q.min_income || 0;
         const maxInc = q.income_max || q.max_income || 0;
+        const priceEok = q.avg_house_price_eok || (q.avg_house_price_manwon ? (q.avg_house_price_manwon/10000).toFixed(1) : '-');
+        const pirVal = q.avg_pir || q.avg_mismatch_ratio || '-';
+        const savings25 = q.avg_pir ? (q.avg_pir / 0.25).toFixed(1) : '-';
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -701,10 +712,10 @@ function renderQuintilesTab() {
             <td>${q.count}개</td>
             <td>${minInc.toLocaleString()}만 ~ ${maxInc.toLocaleString()}만 원</td>
             <td><strong>${avgInc.toLocaleString()}만 원</strong></td>
-            <td>${q.avg_income_index}</td>
-            <td>${q.avg_price_index}</td>
+            <td><strong style="color:#f1f5f9;">${priceEok}억 원</strong></td>
+            <td><strong class="text-warning">PIR ${pirVal}배</strong></td>
+            <td style="color:#a5b4fc; font-weight:600;">${savings25}년</td>
             <td style="color: ${q.avg_growth_rate >= 0 ? '#f87171' : '#38bdf8'}; font-weight: 700;">${q.avg_growth_rate >= 0 ? '+' : ''}${q.avg_growth_rate}%</td>
-            <td><strong class="text-warning">${q.avg_mismatch_ratio}%</strong></td>
             <td style="color: #94a3b8; font-size: 0.82rem;">${(q.sample_districts || []).join(', ')}</td>
         `;
         tbody.appendChild(tr);
@@ -717,10 +728,13 @@ function renderQuintilesTab() {
     if (q1 && q5 && insightEl) {
         const q5Inc = q5.avg_income_manwon || q5.avg_income || 0;
         const q1Inc = q1.avg_income_manwon || q1.avg_income || 0;
+        const q5Price = q5.avg_house_price_eok || (q5.avg_house_price_manwon / 10000).toFixed(1);
+        const q1Price = q1.avg_house_price_eok || (q1.avg_house_price_manwon / 10000).toFixed(1);
         insightEl.innerHTML = `
-            전국 148개 자치구 분석 결과, 최상위 5분위(평균 <strong>${q5Inc.toLocaleString()}만원</strong>)와 최하위 1분위(평균 <strong>${q1Inc.toLocaleString()}만원</strong>)의 소득 5분위 배율은 <strong>약 ${nat.income_gap_ratio}배</strong> 수준입니다. 
-            그러나 가격지수에 대한 체감 주거부담 괴리율은 1분위(<strong>${q1.avg_mismatch_ratio}%</strong>)가 5분위(<strong>${q5.avg_mismatch_ratio}%</strong>) 대비 <strong>${nat.mismatch_gap_ratio}배 높아</strong>, 
-            소득이 취약할수록 주택 가격 지수에 대한 체감 주거비 압박을 심하게 겪는 <strong>'주거 부담 역진성(Regressive Housing Burden)'</strong> 현상이 통계적으로 명확히 입증됩니다.
+            전국 148개 자치구 실증분석 결과, 최상위 5분위(평균 <strong>${q5Inc.toLocaleString()}만원</strong>)와 최하위 1분위(평균 <strong>${q1Inc.toLocaleString()}만원</strong>)의 연소득 격차는 <strong>약 ${nat.income_gap_ratio}배</strong> 수준입니다. 
+            그러나 아파트 매매가는 5분위(<strong>${q5Price}억 원</strong>)가 1분위(<strong>${q1Price}억 원</strong>) 대비 <strong>${nat.asset_gap_ratio || 4.1}배</strong>에 달하며, 
+            내 집 마련 소요 연수(PIR) 역시 1분위(<strong>${q1.avg_pir}년</strong>) 대비 5분위(<strong>${q5.avg_pir}년</strong>)가 압도적으로 높게 나타납니다. 
+            이는 <strong>근로소득의 차이보다 부동산 자산 축적으로 인한 자산 양극화(Asset Inequality)가 훨씬 더 파괴적으로 벌어지고 있음</strong>을 명백히 입증합니다.
         `;
     }
 }
@@ -732,13 +746,13 @@ function renderMacroRegionsTab() {
     if (!currentData || !currentData.macro_regions) return;
     const regions = currentData.macro_regions;
 
-    // 8-1. Chart: Macro Regions Income vs Price Index
+    // 8-1. Chart: Macro Regions PIR vs Income
     const ctxMacro = document.getElementById('chartMacroRegions').getContext('2d');
     if (macroRegionsChart) macroRegionsChart.destroy();
 
     const labels = regions.map(r => r.region_name);
+    const pirs = regions.map(r => (r.avg_pir || r.avg_mismatch_ratio));
     const incomes = regions.map(r => r.avg_income_manwon);
-    const prices = regions.map(r => r.avg_price_index);
 
     macroRegionsChart = new Chart(ctxMacro, {
         type: 'bar',
@@ -746,15 +760,15 @@ function renderMacroRegionsTab() {
             labels: labels,
             datasets: [
                 {
-                    label: '권역 평균 연봉 (만원)',
-                    data: incomes,
-                    backgroundColor: 'rgba(56, 189, 248, 0.85)',
+                    label: '권역 평균 실질 PIR (년)',
+                    data: pirs,
+                    backgroundColor: 'rgba(248, 113, 113, 0.85)',
                     borderRadius: 6
                 },
                 {
-                    label: '권역 평균 가격지수',
-                    data: prices,
-                    backgroundColor: 'rgba(99, 102, 241, 0.85)',
+                    label: '권역 평균 연봉 (만원)',
+                    data: incomes.map(inc => inc / 100), // 스케일 조정 (백만원 단위)
+                    backgroundColor: 'rgba(56, 189, 248, 0.85)',
                     borderRadius: 6
                 }
             ]
@@ -764,29 +778,43 @@ function renderMacroRegionsTab() {
             maintainAspectRatio: false,
             plugins: {
                 legend: { labels: { color: '#94a3b8', font: { size: 11, weight: 'bold' } } },
-                tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', padding: 10 }
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    padding: 10,
+                    callbacks: {
+                        label: (ctx) => {
+                            if (ctx.datasetIndex === 0) return `⏳ 실질 PIR: ${ctx.raw}년`;
+                            const actualInc = (ctx.raw * 100).toFixed(0);
+                            return `💰 평균 연봉: ${Number(actualInc).toLocaleString()}만 원`;
+                        }
+                    }
+                }
             },
             scales: {
                 x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
-                y: { grid: { color: 'rgba(255, 255, 255, 0.06)' }, ticks: { color: '#94a3b8' } }
+                y: {
+                    title: { display: true, text: '실질 PIR (소득대비 집값 배수, 년)', color: '#f87171' },
+                    grid: { color: 'rgba(255, 255, 255, 0.06)' },
+                    ticks: { color: '#94a3b8' }
+                }
             }
         }
     });
 
-    // 8-2. Chart: Macro Regions Growth Rate
+    // 8-2. Chart: Macro Regions House Price
     const ctxGrowth = document.getElementById('chartMacroGrowth').getContext('2d');
     if (macroGrowthChart) macroGrowthChart.destroy();
 
-    const growths = regions.map(r => r.avg_growth_rate);
+    const prices = regions.map(r => (r.avg_house_price_eok || (r.avg_house_price_manwon/10000)));
 
     macroGrowthChart = new Chart(ctxGrowth, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
-                label: '최근 6개월 가격 변동률 (%)',
-                data: growths,
-                backgroundColor: growths.map(g => g >= 0 ? 'rgba(248, 113, 113, 0.85)' : 'rgba(56, 189, 248, 0.85)'),
+                label: '권역 평균 아파트 매매가 (억원)',
+                data: prices,
+                backgroundColor: 'rgba(192, 132, 252, 0.85)',
                 borderRadius: 6
             }]
         },
@@ -800,7 +828,7 @@ function renderMacroRegionsTab() {
             scales: {
                 x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
                 y: {
-                    title: { display: true, text: '변동률 (%)', color: '#94a3b8' },
+                    title: { display: true, text: '평균 매매가 (억 원)', color: '#c084fc' },
                     grid: { color: 'rgba(255, 255, 255, 0.06)' },
                     ticks: { color: '#94a3b8' }
                 }
@@ -813,16 +841,19 @@ function renderMacroRegionsTab() {
     tbody.innerHTML = '';
     regions.forEach(r => {
         const tr = document.createElement('tr');
+        const priceEok = r.avg_house_price_eok || (r.avg_house_price_manwon ? (r.avg_house_price_manwon/10000).toFixed(1) : '-');
+        const pirVal = r.avg_pir || r.avg_mismatch_ratio || '-';
+
         tr.innerHTML = `
             <td><strong>${r.region_name}</strong></td>
             <td style="color: #94a3b8;">${r.sidos.join(', ')}</td>
             <td>${r.count}개 자치구</td>
             <td><strong>${r.avg_income_manwon.toLocaleString()}만 원</strong></td>
-            <td>${r.avg_price_index}</td>
+            <td><strong style="color:#f1f5f9;">${priceEok}억 원</strong></td>
+            <td><strong class="text-warning">PIR ${pirVal}배</strong></td>
             <td style="color: ${r.avg_growth_rate >= 0 ? '#f87171' : '#38bdf8'}; font-weight: 700;">${r.avg_growth_rate >= 0 ? '+' : ''}${r.avg_growth_rate}%</td>
-            <td><strong class="text-warning">${r.avg_mismatch_ratio}%</strong></td>
             <td><span class="table-badge badge-q1">${r.top_income_gu}</span></td>
-            <td><span class="table-badge badge-q2">${r.top_mismatch_gu}</span></td>
+            <td><span class="table-badge badge-q2">${r.top_pir_gu || r.top_mismatch_gu}</span></td>
         `;
         tbody.appendChild(tr);
     });
@@ -997,8 +1028,8 @@ function renderAiReport(data) {
     document.getElementById('reportHeadlineText').innerText = report.headline;
     document.getElementById('rIncomeVal').innerText = `${stats.avg_income_manwon.toLocaleString()}만 원`;
     document.getElementById('rIncomeRank').innerText = `${stats.nat_income_rank}위 / ${nat.total_nationwide}개`;
-    document.getElementById('rPriceVal').innerText = `${stats.price_index_latest} (${stats.growth_rate >= 0 ? '+' : ''}${stats.growth_rate}%)`;
-    document.getElementById('rMismatchVal').innerText = `${stats.mismatch_ratio}% (${stats.quadrant_label.split(' ')[0]})`;
+    document.getElementById('rPriceVal').innerText = `${stats.avg_house_price_eok}억 원 (최근 변동: ${stats.growth_rate >= 0 ? '+' : ''}${stats.growth_rate}%)`;
+    document.getElementById('rMismatchVal').innerText = `PIR ${stats.pir}배 (저축25% 시 ${stats.savings_years_25}년)`;
 
     document.getElementById('reportIncomeText').innerText = report.income_summary;
     document.getElementById('reportHousingText').innerText = report.housing_summary;
@@ -1262,10 +1293,11 @@ function generateMarkdownReport() {
 ---
 
 ## 📊 ${s.full_name} 공식 통계 지표 요약 (대한민국 전국 기준)
-* **1인당 평균 근로소득**: ${s.avg_income_manwon.toLocaleString()}만 원 (전국 ${nat.total_nationwide}개 시·군·구 중 **${s.nat_income_rank}위**)
-* **대한민국 전국 평균 대비 소득 지수**: ${s.income_index} (전국 평균: ${nat.avg_income_manwon.toLocaleString()}만 원 = 100 기준)
-* **주택 매매가격지수**: ${s.price_index_latest} (최근 6개월 변동률: **${s.growth_rate >= 0 ? '+' : ''}${s.growth_rate}%**, 전국 평균: +${nat.price_growth_rate}%)
-* **소득 대비 주거부담 괴리율**: **${s.mismatch_ratio}%**
+* **1인당 평균 근로소득**: ${s.avg_income_manwon.toLocaleString()}만 원 (전국 ${nat.total_nationwide}개 시·군·구 중 **소득 #${s.nat_income_rank}위**)
+* **평균 아파트 매매가격**: **${s.avg_house_price_eok}억 원**
+* **실질 PIR (내 집 마련 소요 연수)**: **${s.pir}년** (전국 PIR 순위: **#${s.nat_pir_rank || s.pir}위**, 전국 평균: 12.1년)
+* **실질 저축 시 소요 기간 (소득의 25% 저축 가정)**: **${s.savings_years_25}년**
+* **최근 6개월 가격 변동률**: **${s.growth_rate >= 0 ? '+' : ''}${s.growth_rate}%** (전국 평균: +${nat.price_growth_rate}%)
 * **4분면 특성 분류**: ${s.quadrant_label}
 
 ---

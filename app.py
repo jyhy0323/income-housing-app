@@ -84,28 +84,27 @@ def ai_analyze():
 
         prompt = f"""
 당신은 대한민국 거시경제 및 국토/부동산 통계 전문가입니다.
-국세청 연말정산 공식 근로소득 데이터와 한국부동산원 공식 주택 매매가격지수 통계를 바탕으로,
-전국 시·군·구 단위에서 '{target['full_name']}'의 소득 수준과 부동산 가격의 상관관계 및 주거부담 괴리율을 심층 진단해 주세요.
+국세청 연말정산 공식 근로소득 데이터와 한국부동산원/국토교통부 아파트 실거래 시세 및 매매가격지수 통계를 바탕으로,
+전국 시·군·구 단위에서 '{target['full_name']}'의 소득 수준과 부동산 가격의 상관관계 및 실질 PIR(Price to Income Ratio, 내 집 마련 소요 연수)을 심층 진단해 주세요.
 
 [공식 통계 지표]
 1. 분석 대상: {target['full_name']} (주택유형: {housing_type})
 2. 근로소득 지표:
-   - 1인당 평균 연봉: {target['avg_income_manwon']:,}만 원
-   - 대한민국 전국 평균 대비 소득 지수: {target['income_index']} (전국 평균 100 기준, 전국 평균연봉: {nat_summary['avg_income_manwon']:,}만 원)
-   - 전국 시·군·구 중 소득 순위: {target['nat_income_rank']}위 / {nat_summary['total_nationwide']}개
-3. 부동산 가격지표:
-   - 최신 가격지수(2026.09): {target['price_index_latest']}
-   - 최근 6개월 가격 상승률: {target['growth_rate']}% (전국 전체 평균 상승률: {nat_summary['price_growth_rate']}%)
-4. 융합 진단 지표:
-   - 소득 대비 가격지수 괴리율(Mismatch Ratio): {target['mismatch_ratio']}% (100 초과 시 소득 대비 집값 부담/상승 가중)
-   - 4분면 특성 분류: {target['quadrant_label']}
+   - 1인당 평균 연봉: {target['avg_income_manwon']:,}만 원 (전국 시·군·구 중 소득 순위: {target['nat_income_rank']}위 / {nat_summary['total_nationwide']}개)
+   - 대한민국 전국 평균 대비 소득 지수: {target['income_index']} (전국 평균: {nat_summary['avg_income_manwon']:,}만 원 = 100 기준)
+3. 부동산 가격 및 주거 부담 지표:
+   - 평균 주택 매매가격: {target['avg_house_price_eok']}억 원 (전국 평균: {nat_summary['avg_house_price_eok']}억 원)
+   - 실질 PIR (내 집 마련 소요 연수): {target['pir']}년 (전국 PIR 순위: #{target['nat_pir_rank']}위, 전국 평균: {nat_summary['avg_pir']}년)
+   - 실질 저축(25%) 시 소요 기간: {target['savings_years_25']}년
+   - 최근 6개월 가격 상승률: {target['growth_rate']}% (전국 전체 평균: +{nat_summary['price_growth_rate']}%)
+4. 4분면 거시경제 특성 분류: {target['quadrant_label']}
 
 반드시 아래 JSON 포맷 규격에 맞춰 한국어로 답변해 주세요:
 {{
-  "headline": "전국적 관점에서 해당 시·군·구의 경제·부동산 특성을 관통하는 명확하고 학술적인 한 줄 헤드라인",
-  "income_summary": "{target['full_name']}의 소득 수준(전국 {target['nat_income_rank']}위)과 수도권/지방 간 소득 격차에 대한 객관적 해석 (2~3문장)",
-  "housing_summary": "{housing_type} 가격지수 및 최근 상승률 흐름에 대한 전국 시장 대비 해석 (2~3문장)",
-  "mismatch_analysis": "소득 지표와 부동산 지표를 결합했을 때 나타나는 주거부담 및 불균형 괴리율 진단 (2~3문장)",
+  "headline": "전국적 관점에서 해당 시·군·구의 소득과 실질 PIR(주거부담 배수) 특성을 관통하는 명확하고 학술적인 한 줄 헤드라인",
+  "income_summary": "{target['full_name']}의 소득 수준(전국 #{target['nat_income_rank']}위)과 소득 구조에 대한 객관적 해석 (2~3문장)",
+  "housing_summary": "{target['full_name']}의 평균 매매가({target['avg_house_price_eok']}억 원) 및 가격 흐름에 대한 전국 시장 대비 해석 (2~3문장)",
+  "mismatch_analysis": "소득 대비 실질 PIR({target['pir']}배, 저축25% 시 {target['savings_years_25']}년 소요)을 바탕으로 한 주거 과부담 및 주거사다리 격차 진단 (2~3문장)",
   "policy_implication": "조별 과제 보고서 및 논문에 바로 인용할 수 있는 학술적/정책적 시사점 (2~3문장)"
 }}
 """
@@ -157,14 +156,15 @@ def chat_query():
         compact_rows = []
         for d in districts:
             compact_rows.append({
-                "rank": d['nat_income_rank'],
+                "pir_rank": d['nat_pir_rank'],
+                "inc_rank": d['nat_income_rank'],
                 "sido": d['sido'],
                 "gu": d['name'],
                 "income": d['avg_income_manwon'],
-                "income_idx": d['income_index'],
-                "price_idx": d['price_index_latest'],
+                "price_eok": d['avg_house_price_eok'],
+                "pir": d['pir'],
+                "savings_25": d['savings_years_25'],
                 "growth": d['growth_rate'],
-                "mismatch": d['mismatch_ratio'],
                 "quad": d['quadrant_label'].split(' ')[0]
             })
 
@@ -182,17 +182,19 @@ def chat_query():
         )
 
         prompt = f"""
-당신은 대한민국 거시경제 및 국토 통계 전문 AI입니다.
-아래 제공된 대한민국 전국 148개 시·군·구의 공식 통계 데이터(국세청 연말정산 1인당 평균 근로소득 및 한국부동산원 주택 가격지수, 괴리율)를 읽고,
+당신은 대한민국 거시경제 및 국토/부동산 통계 전문 AI입니다.
+아래 제공된 대한민국 전국 148개 시·군·구의 공식 통계 데이터(국세청 연말정산 1인당 평균 근로소득 및 평균 아파트 매매가격, 실질 PIR 소요년수)를 읽고,
 사용자의 질문에 데이터 기반으로 정확히 답변하며, 질문과 관련된 데이터들을 추출하여 [맞춤형 결과 표]를 구성해 주세요.
 사용자가 답변에 대해 추가적인 '가지 질문(꼬리 질문)'을 던졌다면, 이전 대화 맥락을 충분히 반영하여 심층적으로 답변해 주세요.
 
 [대한민국 전국 공식 통계 데이터 요약]
-- 전국 평균 연봉: {nat_summary['avg_income_manwon']:,}만 원 (전국 소득지수 100 기준점)
-- 전국 평균 가격지수: {nat_summary['price_index_latest']} (최근 6개월 상승률: +{nat_summary['price_growth_rate']}%)
+- 전국 평균 연봉: {nat_summary['avg_income_manwon']:,}만 원
+- 전국 평균 아파트 매매가: {nat_summary['avg_house_price_eok']}억 원
+- 전국 평균 실질 PIR (내 집 마련 소요 연수): {nat_summary['avg_pir']}년 (소득의 25% 저축 시 약 48.4년)
+- 전국 최고 PIR 1위 지역: {nat_summary['top_pir_gu']}
 - 전체 자치구 수: {len(compact_rows)}개
 {history_text}
-[전체 자치구 148개 데이터셋]
+[전체 자치구 148개 데이터셋 (PIR 순 정렬)]
 {json.dumps(compact_rows, ensure_ascii=False)}
 
 [사용자의 질문]
@@ -201,7 +203,8 @@ def chat_query():
 [작성 지침]
 1. 반드시 실제 데이터셋에 존재하는 수치만을 정확히 인용하세요. 왜곡이나 추정치는 금지합니다.
 2. 답변(answer): 질문자의 의도를 정확히 해결하는 명쾌하고 친절한 경제 통계적 해설 (3~5문장).
-   - 강남 등 고가 지역의 괴리율이 낮게 나오는 이유에 대해 묻는다면: "부동산원 가격지수(Index, 2021=100)는 실거래 매매가(20~30억)가 아닌 시계열 지표(강남 98.5)이고, 소득지수는 198.9(전국의 약 2배)이므로 수학적으로 (98.5/198.9)*100 = 49.5%로 낮게 계산되는 지표의 통계적 특성"을 친절히 설명해 주세요.
+   - 강남구(PIR 30.9배, 집값 26억/연봉 8,420만)는 전국에서 가장 주거 장벽이 높은 압도적 1위 과부담 지역임을 명확히 서술하세요.
+   - 울산 남구/북구, 화성시 등은 고연봉이면서 집값이 3~5억대로 PIR 7~10배 수준인 최고의 '고소득 실속 가성비 거주지'임을 시사점으로 활용하세요.
 3. 핵심 요약(key_points): 질문과 직결된 핵심 수치 요약 2~3개.
 4. 결과 표(table): 질문에 해당하는 지역들을 선별하거나 비교하여 [제목(title)], [열 목록(headers)], [행 데이터(rows)]로 구성하세요.
 5. 가지 질문 추천(follow_up_questions): 사용자가 이 답변을 읽고 더 깊이 파고들 수 있는 날카롭고 흥미로운 후속 '가지 질문' 3가지를 제시하세요.
@@ -214,14 +217,14 @@ def chat_query():
     "핵심 수치 요약 2"
   ],
   "table": {{
-    "title": "추출 및 분석 결과 표 제목 (예: 전국 연봉 5,000만 원 이상 자치구 비교 표)",
-    "headers": ["전국순위", "시·도", "시·군·구", "1인당 평균연봉(만원)", "전국대비 소득지수", "가격지수", "최근 상승률", "소득대비 괴리율", "4분면 분류"],
+    "title": "추출 및 분석 결과 표 제목 (예: 전국 실질 PIR(내 집 마련 소요연수) TOP 10 비교 표)",
+    "headers": ["PIR순위", "소득순위", "시·도", "시·군·구", "1인당 평균연봉(만원)", "평균 매매가(억원)", "실질 PIR(년)", "저축25% 소요년수", "4분면 분류"],
     "rows": [
-      ["#1", "서울", "강남구", "8,419.6", "198.89", "98.50", "+0.33%", "49.52%", "자산집중"]
+      ["#1", "#1", "서울", "강남구", "8,419.6", "26.0억", "30.9배", "123.6년", "초고가과부담"]
     ]
   }},
   "follow_up_questions": [
-    "추천 후속 가지 질문 1 (예: 강남과 부산 중구의 공식 지표 대조 표 보여줘)",
+    "추천 후속 가지 질문 1 (예: 강남과 부산 해운대의 집값과 PIR을 표로 비교해줘)",
     "추천 후속 가지 질문 2",
     "추천 후속 가지 질문 3"
   ]

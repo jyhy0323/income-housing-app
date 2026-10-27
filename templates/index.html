@@ -33,9 +33,9 @@
                 <div class="kpi-sub">국세청 연말정산 공식 통계 (전국 100 기준점)</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-label">소득 5분위 양극화 배율</div>
+                <div class="kpi-label">전국 평균 주택가격 (PIR)</div>
                 <div class="kpi-value text-accent" id="kpiIncomeGap">-</div>
-                <div class="kpi-sub" id="kpiIncomeGapSub">상위 20%(5분위) ÷ 하위 20%(1분위)</div>
+                <div class="kpi-sub" id="kpiIncomeGapSub">전국 평균 PIR: 약 12.1배 (소요년수)</div>
             </div>
             <div class="kpi-card highlight-card">
                 <div class="kpi-label">전국 최고 연봉 1위 지역</div>
@@ -43,9 +43,9 @@
                 <div class="kpi-sub" id="kpiTopIncomeVal">평균 연봉 -</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-label">전국 최고 주거부담 (괴리율 1위)</div>
+                <div class="kpi-label">전국 최고 주거과부담 (PIR 1위)</div>
                 <div class="kpi-value text-warning" id="kpiTopMismatchGu">-</div>
-                <div class="kpi-sub" id="kpiTopMismatchVal">소득 대비 주거부담 경보 지역</div>
+                <div class="kpi-sub" id="kpiTopMismatchVal">소득 대비 집값 부담 극대화 지역</div>
             </div>
         </section>
 
@@ -110,14 +110,14 @@
                     <div class="card chart-card">
                         <div class="card-header">
                             <div class="card-title-group">
-                                <h2 id="quadrantTitle">📊 4분면 매트릭스: 소득 수준 vs 부동산 상승률</h2>
+                                <h2 id="quadrantTitle">📊 4분면 매트릭스: 소득 수준 vs 실질 PIR (내 집 마련 소요 연수)</h2>
                                 <p class="card-subtitle">점을 클릭하면 해당 지역의 통계와 AI 진단이 즉시 실행됩니다.</p>
                             </div>
                             <div class="chart-legend-custom">
-                                <span class="legend-item"><span class="dot q1"></span> Q1 자산집중</span>
-                                <span class="legend-item"><span class="dot q2"></span> Q2 주거부담경보</span>
-                                <span class="legend-item"><span class="dot q3"></span> Q3 서민안정</span>
-                                <span class="legend-item"><span class="dot q4"></span> Q4 신흥성장</span>
+                                <span class="legend-item"><span class="dot q1"></span> Q1 초고가과부담 (강남권)</span>
+                                <span class="legend-item"><span class="dot q2"></span> Q2 소득대비장벽 (서민과부담)</span>
+                                <span class="legend-item"><span class="dot q3"></span> Q3 지방서민안정</span>
+                                <span class="legend-item"><span class="dot q4"></span> Q4 고소득실속가성비 (울산/화성)</span>
                             </div>
                         </div>
                         <div class="canvas-container">
@@ -128,8 +128,8 @@
                     <div class="card chart-card">
                         <div class="card-header">
                             <div class="card-title-group">
-                                <h2 id="rankingTitle">🏆 소득 순위 vs 주거부담 괴리율 (전국 100 기준)</h2>
-                                <p class="card-subtitle">소득 수준(하늘색) 대비 가격지수 부담(주황색)의 불균형을 대조합니다.</p>
+                                <h2 id="rankingTitle">🏆 전국 자치구별 실질 PIR (내 집 마련 소요 연수) TOP 25</h2>
+                                <p class="card-subtitle">연봉 전액 저축 시 vs 실질 저축(25%) 시 소요 기간 비교</p>
                             </div>
                         </div>
                         <div class="canvas-container-bar">
@@ -177,11 +177,11 @@
                                         <strong class="r-val" id="rIncomeRank">-</strong>
                                     </div>
                                     <div class="r-stat">
-                                        <span class="r-lbl">주택 가격지수</span>
+                                        <span class="r-lbl">평균 주택가격</span>
                                         <strong class="r-val" id="rPriceVal">-</strong>
                                     </div>
                                     <div class="r-stat">
-                                        <span class="r-lbl">소득대비 괴리율</span>
+                                        <span class="r-lbl">실질 PIR (소요연수)</span>
                                         <strong class="r-val text-warning" id="rMismatchVal">-</strong>
                                     </div>
                                 </div>
@@ -192,12 +192,12 @@
                                 </div>
 
                                 <div class="report-section">
-                                    <h4>🏠 부동산 가격 및 최근 상승 흐름</h4>
+                                    <h4>🏠 부동산 실제 매매가 및 시세 수준</h4>
                                     <p id="reportHousingText"></p>
                                 </div>
 
                                 <div class="report-section">
-                                    <h4>⚖️ 소득 vs 부동산 불균형 괴리율 진단</h4>
+                                    <h4>⚖️ 소득 vs 집값 실질 PIR (내 집 마련 소요 기간)</h4>
                                     <p id="reportMismatchText"></p>
                                 </div>
 
@@ -225,25 +225,25 @@
                     </div>
                     <div class="table-sort-actions">
                         <span class="sort-title">정렬 기준:</span>
-                        <button class="sort-btn active" data-sort="nat_income_rank">전국 소득순위</button>
-                        <button class="sort-btn" data-sort="mismatch_ratio">주거부담 괴리율</button>
-                        <button class="sort-btn" data-sort="growth_rate">최근 상승률</button>
-                        <button class="sort-btn" data-sort="price_index_latest">가격 지수</button>
+                        <button class="sort-btn active" data-sort="pir">실질 PIR 순위</button>
+                        <button class="sort-btn" data-sort="nat_income_rank">소득 순위</button>
+                        <button class="sort-btn" data-sort="avg_house_price_manwon">평균 집값 순</button>
+                        <button class="sort-btn" data-sort="growth_rate">최근 변동률</button>
                     </div>
                 </div>
                 <div class="table-wrapper">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>전국순위</th>
+                                <th>PIR순위</th>
+                                <th>소득순위</th>
                                 <th>시·도</th>
                                 <th>시·군·구</th>
                                 <th>1인당 평균 연봉</th>
-                                <th>전국대비 소득지수 (전국=100)</th>
-                                <th>가격지수 (기준월)</th>
-                                <th>가격지수 (최신)</th>
+                                <th>평균 주택 매매가</th>
+                                <th>실질 PIR (내집마련 소요연수)</th>
+                                <th>실질저축소요(25%)</th>
                                 <th>최근 6개월 변동률</th>
-                                <th>소득대비 괴리율</th>
                                 <th>4분면 특성</th>
                                 <th>AI 분석</th>
                             </tr>
@@ -282,8 +282,8 @@
                 <div class="card">
                     <div class="card-header">
                         <div>
-                            <h2>⚖️ 소득 분위별 주거부담 괴리율(Mismatch Ratio) 곡선</h2>
-                            <p class="card-subtitle">소득이 낮은 1~2분위일수록 집값 지수에 대한 체감 주거부담(120%~130%)이 가혹합니다.</p>
+                            <h2>⚖️ 소득 분위별 실질 PIR (내 집 마련 소요 연수) 곡선</h2>
+                            <p class="card-subtitle">고소득 분위로 갈수록 고가 아파트 쏠림으로 PIR(내 집 마련 소요 연수)이 급등합니다.</p>
                         </div>
                     </div>
                     <div class="canvas-container">
@@ -309,10 +309,10 @@
                                 <th>지역 수</th>
                                 <th>소득 범위 (연봉)</th>
                                 <th>평균 연봉</th>
-                                <th>전국대비 소득지수</th>
-                                <th>평균 가격지수</th>
+                                <th>평균 주택가격</th>
+                                <th>평균 실질 PIR (년)</th>
+                                <th>저축 25% 소요년수</th>
                                 <th>평균 최근 변동률</th>
-                                <th>평균 주거부담 괴리율</th>
                                 <th>포함 대표 자치구</th>
                             </tr>
                         </thead>
@@ -325,11 +325,7 @@
                 <!-- Academic Insight Box -->
                 <div class="academic-insight-box">
                     <div class="insight-badge">🏛️ 거시경제 양극화 분석 모델 인사이트</div>
-                    <p id="quintileInsightText">
-                        전국 148개 자치구 분석 결과, 최상위 5분위(평균 5,327만원)와 최하위 1분위(평균 3,279만원)의 소득 5분위 배율은 <strong>약 1.62배</strong> 수준입니다. 
-                        그러나 가격지수에 대한 체감 주거부담 괴리율은 1분위(129.7%)가 5분위(83.3%) 대비 <strong>1.56배 높아</strong>, 
-                        소득이 낮은 계층일수록 최근 주택 가격 상승의 압박을 고스란히 짊어지는 역진적 양극화가 통계로 증명됩니다.
-                    </p>
+                    <p id="quintileInsightText"></p>
                 </div>
             </div>
         </div>
@@ -380,11 +376,11 @@
                                 <th>포함 시·도</th>
                                 <th>분석 지역 수</th>
                                 <th>권역 평균 연봉</th>
-                                <th>권역 평균 가격지수</th>
+                                <th>권역 평균 매매가</th>
+                                <th>권역 평균 실질 PIR</th>
                                 <th>최근 6개월 변동률</th>
-                                <th>평균 주거부담 괴리율</th>
                                 <th>권역 내 최고 연봉 1위 지역</th>
-                                <th>권역 내 최고 주거부담 1위 지역</th>
+                                <th>권역 내 최고 주거과부담(PIR 1위)</th>
                             </tr>
                         </thead>
                         <tbody id="macroTableBody">
@@ -466,15 +462,15 @@
 
                 <div class="quick-chips">
                     <span class="chip-label">추천 질문:</span>
-                    <button class="chip-btn" data-q="연봉 5천만원 이상인 지역들만 뽑아서 비교 표로 보여줘">💡 연봉 5천만 원 이상 지역 표</button>
-                    <button class="chip-btn" data-q="부산에서 소득 대비 집값 부담(괴리율)이 가장 높은 5곳을 표로 비교해줘">💡 부산 집값부담 TOP 5 표</button>
-                    <button class="chip-btn" data-q="서울 강남구와 경기 성남시(분당)의 소득과 부동산 지표를 표로 대조해줘">💡 강남 vs 성남 분당 대조 표</button>
-                    <button class="chip-btn" data-q="소득은 전국 평균 이상이면서 최근 가격 상승률이 가장 낮은 안정적인 가성비 지역 TOP 5를 표로 보여줘">💡 살기 좋은 가성비 지역 TOP 5</button>
-                    <button class="chip-btn" data-q="수도권 외 지방에서 1인당 평균 연봉이 가장 높은 상위 5개 지역을 표로 알려줘">💡 비수도권 최고 소득 지역 5곳</button>
+                    <button class="chip-btn" data-q="전국에서 실질 PIR(내 집 마련 소요 연수)이 가장 높은 TOP 10 지역을 표로 비교해줘">💡 전국 최고 주거장벽(PIR) TOP 10</button>
+                    <button class="chip-btn" data-q="서울 강남구와 부산 중구의 연봉, 평균 집값, 실질 PIR을 표로 나란히 비교하고 해석해줘">💡 강남 vs 부산 중구 정밀 대조</button>
+                    <button class="chip-btn" data-q="연봉은 높은데 집값은 저렴해서 PIR이 낮은 실속 가성비 거주지 TOP 5를 표로 추천해줘">💡 고소득 가성비 거주지 TOP 5</button>
+                    <button class="chip-btn" data-q="서울 강남구와 경기 과천시, 성남시 분당구의 소득과 PIR 지표를 표로 대조해줘">💡 강남 vs 과천 vs 분당 대조</button>
+                    <button class="chip-btn" data-q="소득 5분위별 평균 연봉과 실제 집값, PIR 배수를 표로 정리해줘">💡 소득 5분위별 자산 격차 표</button>
                 </div>
 
                 <div class="chat-input-row">
-                    <input type="text" id="chatInputText" class="chat-input" placeholder="궁금한 점을 자유롭게 질문하세요 (예: '경기 과천과 화성 비교해줘', '괴리율 130% 넘는 곳 표로 보여줘')">
+                    <input type="text" id="chatInputText" class="chat-input" placeholder="궁금한 점을 자유롭게 질문하세요 (예: '강남구 PIR 분석해줘', 'PIR 20배 넘는 지역 표로 보여줘')">
                     <button id="btnSubmitChat" class="btn-chat-submit">
                         <span>🚀 AI 분석 & 맞춤 표 생성</span>
                     </button>
